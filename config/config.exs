@@ -28,3 +28,10 @@ use Mix.Config
 # here (which is why it is important to import them last).
 #
 #     import_config "#{Mix.env}.exs"
+config :acme, :private_key, %{
+  "kty" => "EC",
+  "crv" => "P-384",
+  "d" => "LIK4CvzeIeISvMXhKowIaUH1gS9nxnyRwh-NpX52V2aqYTPg5adSyx6rrLdDiDX3",
+  "x" => "qo9XI4pCihNEJjxcEOFmFfHI5mIC1PJF0FVd4oe5IJedNE-yLZHLLwgFbqO_jJpG",
+  "y" => "GHYdi049rf2hNzbz4EDXn4Mb3s2PPro3Dbng7Q7QV-DLOWkbZ45NeMsCia2ylr7G"
+}
