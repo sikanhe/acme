@@ -65,7 +65,7 @@ defmodule Acme.Client do
     end
   end
 
-  def map_resouce_to_url(action) do
+  def map_resource_to_url(action) do
     directory = Agent.get(__MODULE__, fn %{directory: directory} -> directory end)
     case Map.fetch(directory, action) do
       {:ok, url} -> url
@@ -90,14 +90,18 @@ defmodule Acme.Client do
     response = Poison.decode! body
     {:ok, Acme.Registration.from_response(header, response)}
   end
-  def handle_response({:ok, 202, _header, body}, "reg") do
+  def handle_response({:ok, 202, header, body}, "reg") do
     response = Poison.decode! body
     {:ok, Acme.Registration.from_response(header, response)}
   end
   def handle_response({:ok, 201, _header, body}, "new-authz") do
     {:ok, Acme.Authorization.from_map(Poison.decode!(body))}
   end
-  def handle_response({:ok, _status, _header, body}, _) do
+  def handle_response({:ok, 202, _header, body}, "challenge") do
+    challenge = Poison.decode!(body)
+    {:ok, Acme.Challenge.from_map(challenge)}
+  end
+  def handle_response({:ok, status, _header, body}, _) when status > 299 do
     error = Poison.decode!(body)
     {:error, Acme.Error.from_map(error)}
   end

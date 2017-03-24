@@ -8,6 +8,12 @@ defmodule AcmeTest do
     Acme.Client.start_link(server: test_server, private_key: private_key)
   end
 
+  def prepare_account do
+    {:ok, %Acme.Registration{} = reg} = Acme.register("mailto:example@gmail.com")
+    Acme.agree_terms(reg)
+  end
+
+
   test "register account" do
     assert {:ok, %Acme.Registration{}} = Acme.register("mailto:example@gmail.com")
   end
@@ -17,16 +23,31 @@ defmodule AcmeTest do
   end
 
   test "new authorization" do
-    assert {:ok, %Acme.Registration{} = reg} = Acme.register("mailto:example@gmail.com")
-    assert {:ok, _} = Acme.agree_terms(reg)
+    prepare_account()
     assert {:ok, %Acme.Authorization{}} = Acme.authorize("sikanhe.com")
   end
 
   test "respond to challenge" do
-
+    prepare_account()
+    {:ok, %Acme.Authorization{challenges: challenges}} = Acme.authorize("challengetest.com")
+    assert {:ok, %Acme.Challenge{status: "pending"}} = Acme.respond_challenge(List.first(challenges))
   end
 
   test "get a new certificate" do
+    prepare_account()
+    assert {:error, %Acme.Error{status: 400, detail: err_detail}} = Acme.new_certificate("abc")
+    assert err_detail =~ "certificate request"
+  end
+
+  test "revoke a certificate" do
+
+  end
+
+  test "change account key" do
+
+  end
+
+  test "deactivate an account" do
 
   end
 end
