@@ -105,22 +105,22 @@ defmodule Acme.Client do
     handle_response(response, resource)
   end
 
-  def handle_response({:ok, 201, header, body}, "new-reg") do
+  defp handle_response({:ok, 201, header, body}, "new-reg") do
     response = Poison.decode! body
     {:ok, Acme.Registration.from_response(header, response)}
   end
-  def handle_response({:ok, 202, header, body}, "reg") do
+  defp handle_response({:ok, 202, header, body}, "reg") do
     response = Poison.decode! body
     {:ok, Acme.Registration.from_response(header, response)}
   end
-  def handle_response({:ok, 201, _header, body}, "new-authz") do
+  defp handle_response({:ok, 201, _header, body}, "new-authz") do
     {:ok, Acme.Authorization.from_map(Poison.decode!(body))}
   end
-  def handle_response({:ok, 202, _header, body}, "challenge") do
+  defp handle_response({:ok, 202, _header, body}, "challenge") do
     challenge = Poison.decode!(body)
     {:ok, Acme.Challenge.from_map(challenge)}
   end
-  def handle_response({:ok, status, _header, body}, _) when status > 299 do
+  defp handle_response({:ok, status, _header, body}, _) when status > 299 do
     error = Poison.decode!(body)
     {:error, Acme.Error.from_map(error)}
   end
