@@ -4,11 +4,15 @@ defmodule Acme.Client do
   @client_version Mix.Project.config[:version]
 
   defmodule MissingServerURLError do
-    defexception [:message]
+    defexception message: """
+      You must pass a server url to connect to an Acme server
+    """
   end
 
   defmodule MissingPrivateKeyError do
-    defexception [:message]
+    defexception message: """
+      You must pass a valid private key to connect to an Acme server
+    """
   end
 
   defmodule ConnectionError do
@@ -24,12 +28,8 @@ defmodule Acme.Client do
   * `private_key` - A private_key either in PEM format or as a JWK map
   """
   def start_link(opts) do
-    server_url = Keyword.get(opts, :server) || raise Acme.Client.MissingServerURLError, """
-      You must pass a server url to connect to an Acme server
-    """
-    private_key = Keyword.get(opts, :private_key) || raise Acme.Client.MissingPrivateKeyError, """
-      You must pass a valid private key to connect to an Acme server
-    """
+    server_url = Keyword.get(opts, :server) || raise Acme.Client.MissingServerURLError
+    private_key = Keyword.get(opts, :private_key) || raise Acme.Client.MissingPrivateKeyError
     init_state = %{
       nonce: nil,
       endpoints: nil,
