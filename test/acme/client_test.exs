@@ -20,4 +20,10 @@ defmodule Acme.ClientTest do
     compact = JWS.compact(jws)
     assert JWS.verify_strict(jwk_public, [alg], compact) |> elem(0) == true
   end
+
+  test "missing server url" do
+    assert_raise Acme.Client.Error, fn ->
+      Acme.Client.start_link([])
+    end
+  end
 end

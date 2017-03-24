@@ -5,6 +5,8 @@ defmodule Acme do
 
   @spec request(Acme.Request.t, pid) :: {:ok, term} | {:error, Acme.Error.t}
   defdelegate request(request, pid), to: Acme.Client
+  @spec request!(Acme.Request.r, pid) :: term
+  defdelegate request!(request, pid), to: Acme.Client
 
   @doc """
   Builds an `%Acme.Request{}` for registering an account on the Acme server.

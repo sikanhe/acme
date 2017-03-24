@@ -3,6 +3,10 @@ defmodule Acme.Client do
 
   @client_version Mix.Project.config[:version]
 
+  defmodule Error do
+    defexception [:message]
+  end
+
   @doc """
   Start the Acme client.
 
@@ -12,18 +16,18 @@ defmodule Acme.Client do
   * `private_key` - A private_key either in PEM format or as a JWK map
   """
   def start_link(opts) do
+    server_url = Keyword.get(opts, :server) || raise Acme.Client.Error, """
+      You must pass a server url to connect to an Acme server
+    """
+    private_key = Keyword.get(opts, :private_key) || raise Acme.Client.Error, """
+      You must pass a valid private key to connect to an Acme server
+    """
     init_state = %{
       nonce: nil,
       directory: nil,
-      server_url: Keyword.get(opts, :server),
-      private_key: Keyword.get(opts, :private_key)
+      server_url: server_url,
+      private_key: private_key
     }
-
-    if !init_state.server_url,
-      do: raise "You must pass an Acme server_url to connect to an Acme server"
-    if !init_state.private_key,
-      do:  raise "You must pass a private key to connect to an Acme server"
-
     {:ok, pid} = Agent.start_link(fn -> init_state end)
     initial_request(pid)
     {:ok, pid}
@@ -102,6 +106,18 @@ defmodule Acme.Client do
     response = :hackney.request(method, url, header, body, hackney_opts)
     read_and_update_nonce(pid, response)
     handle_response(response, resource)
+  end
+
+  def request!(request, pid) do
+    case request(request, pid) do
+      {:ok, struct} -> struct
+      error ->
+        raise Acme.Request.Error, """
+          Acme Request Error!
+
+          #{inspect error}
+        """
+    end
   end
 
   defp handle_response({:ok, 201, header, body}, "new-reg") do
