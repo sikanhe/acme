@@ -4,6 +4,7 @@ defmodule Acme do
   """
   alias Acme.{Registration, Authorization, Challenge, Error}
 
+  @spec request(Request.t, pid) :: {:ok, term} | {:error, Error.t}
   defdelegate request(request, pid), to: Acme.Client
 
   @doc """
@@ -13,7 +14,7 @@ defmodule Acme do
 
   * `terms_of_service_agree` - If set to `true`, you agreesto the TOS when signing up. Defaults to `false`.
   """
-  @spec register(binary) :: {:ok, Registration.t} | {:error, Error.t}
+  @spec register(binary) :: Acme.Request.t
   def register(contact) do
     %Acme.Request{
       method: :post,
@@ -28,7 +29,7 @@ defmodule Acme do
   @doc """
   Agree to the TOS after registration
   """
-  @spec agree_terms(Registration.t) :: {:ok, Registration.t} | {:error, Error.t}
+  @spec agree_terms(Registration.t) :: Acme.Request.t
   def agree_terms(%Registration{term_of_service_uri: terms_uri, uri: reg_uri}) do
     %Acme.Request{
       method: :post,
@@ -41,7 +42,7 @@ defmodule Acme do
   @doc """
   Refetch a registration by its uri
   """
-  @spec fetch_registration(binary) :: {:ok, Registration.t} | {:error, Error.t}
+  @spec fetch_registration(binary) :: Acme.Request.t
   def fetch_registration(registration_uri) do
     %Acme.Request{
       method: :post,
@@ -51,7 +52,7 @@ defmodule Acme do
     }
   end
 
-  @spec authorize(binary) :: Authorization.t
+  @spec authorize(binary) :: Acme.Request.t
   def authorize(domain) do
     %Acme.Request{
       method: :post,
@@ -66,7 +67,7 @@ defmodule Acme do
     }
   end
 
-  @spec respond_challenge(Challenge.t) :: {:ok, Challenge.t} | {:error, Error.t}
+  @spec respond_challenge(Challenge.t) :: Acme.Request.t
   def respond_challenge(%Challenge{type: type, uri: uri, token: token}) do
     %Acme.ChallengeRequest{
       uri: uri,
