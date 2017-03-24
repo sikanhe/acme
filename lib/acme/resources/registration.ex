@@ -1,5 +1,5 @@
 defmodule Acme.Registration do
-  defstruct [:id, :key, :contact, :url, :status, :term_of_service_url]
+  defstruct [:id, :key, :contact, :uri, :status, :term_of_service_uri, :agreement]
 
   def from_response(header, response) do
     %Acme.Registration{
@@ -7,12 +7,13 @@ defmodule Acme.Registration do
       key: response["key"],
       contact: response["contact"],
       status: response["Status"],
-      url: find_reg_url(header),
-      term_of_service_url: find_terms_url(header)
+      uri: find_reg_uri(header),
+      term_of_service_uri: find_terms_uri(header),
+      agreement: response["agreement"]
     }
   end
 
-  def find_terms_url(header) do
+  def find_terms_uri(header) do
     Enum.find_value(header, fn {_, value} ->
       if value =~ "terms" do
         [link] = Regex.run(~r/<(.*)>/, value, capture: :all_but_first)
@@ -21,12 +22,9 @@ defmodule Acme.Registration do
     end)
   end
 
-  def find_reg_url(header) do
+  def find_reg_uri(header) do
     Enum.find_value(header, fn {key, value} ->
-      if key == "Location" do
-        uri = URI.parse(value)
-        URI.to_string(uri)
-      end
+      if key == "Location", do: value
     end)
   end
 end

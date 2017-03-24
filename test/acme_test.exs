@@ -13,9 +13,10 @@ defmodule AcmeTest do
     Acme.agree_terms(reg)
   end
 
-
   test "register account" do
-    assert {:ok, %Acme.Registration{}} = Acme.register("mailto:example@gmail.com")
+    assert {:ok, reg = %Acme.Registration{uri: reg_uri}} = Acme.register("mailto:example@gmail.com")
+    Acme.agree_terms(reg)
+    assert {:ok, %Acme.Registration{}} = Acme.fetch_registration(reg_uri)
   end
 
   test "register account failed" do
@@ -37,17 +38,5 @@ defmodule AcmeTest do
     prepare_account()
     assert {:error, %Acme.Error{status: 400, detail: err_detail}} = Acme.new_certificate("abc")
     assert err_detail =~ "certificate request"
-  end
-
-  test "revoke a certificate" do
-
-  end
-
-  test "change account key" do
-
-  end
-
-  test "deactivate an account" do
-
   end
 end

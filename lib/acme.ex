@@ -9,24 +9,45 @@ defmodule Acme do
 
   @doc """
   Register an account on the Acme server
+
+  Supports following options:
+
+  * `terms_of_service_agree` - If set to `true`, you agreesto the TOS when signing up. Defaults to `false`.
   """
   @spec register(binary) :: {:ok, Registration.t} | {:error, Error.t}
-  def register(contact) do
+  @spec register(binary, Keyword.t) :: {:ok, Registration.t} | {:error, Error.t}
+  def register(contact, opts \\ []) do
     payload = %{
-      "resource" => "new-reg",
-      "contact" => [contact]
+      resource: "new-reg",
+      contact: [contact]
     }
     url = Client.map_resource_to_url("new-reg")
-    Client.request(url, payload)
-    |> Client.handle_response("new-reg")
+    response =
+      Client.request(:post, url, payload)
+      |> Client.handle_response("new-reg")
+
+    if Keyword.get(opts, :term_of_service_agree) do
+      with {:ok, reg} <- response, do: agree_terms(reg)
+    else
+      response
+    end
   end
 
   @doc """
   Agree to the TOS after registration
   """
   @spec agree_terms(Registration.t) :: {:ok, Registration.t} | {:error, Error.t}
-  def agree_terms(%Registration{term_of_service_url: terms_url, url: reg_url}) do
-    Acme.Client.request(reg_url, %{resource: "reg", agreement: terms_url})
+  def agree_terms(%Registration{term_of_service_uri: terms_uri, uri: reg_uri}) do
+    Acme.Client.request(:post, reg_uri, %{resource: "reg", agreement: terms_uri})
+    |> Client.handle_response("reg")
+  end
+
+  @doc """
+  Refetch a registration by its uri
+  """
+  @spec fetch_registration(binary) :: {:ok, Registration.t} | {:error, Error.t}
+  def fetch_registration(registration_uri) do
+    Client.request(:post, registration_uri, %{resource: "reg"})
     |> Client.handle_response("reg")
   end
 
@@ -40,7 +61,7 @@ defmodule Acme do
       }
     }
     url = Client.map_resource_to_url("new-authz")
-    Client.request(url, payload)
+    Client.request(:post, url, payload)
     |> Client.handle_response("new-authz")
   end
 
@@ -54,7 +75,7 @@ defmodule Acme do
       keyAuthorization: key_auth
     }
 
-    Client.request(uri, payload)
+    Client.request(:post, uri, payload)
     |> Client.handle_response("challenge")
   end
 
@@ -65,7 +86,7 @@ defmodule Acme do
     }
 
     url = Client.map_resource_to_url("new-cert")
-    Client.request(url, payload)
+    Client.request(:post, url, payload)
     |> Client.handle_response("new-cert")
   end
 end

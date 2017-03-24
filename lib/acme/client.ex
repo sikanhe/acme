@@ -55,7 +55,7 @@ defmodule Acme.Client do
 
   defp initial_request() do
     directory_url = Path.join retrieve_server_url(), "directory"
-    case :hackney.get(directory_url, default_request_header(), <<>>, [with_body: true]) do
+    case request(:get, directory_url) do
       {:ok, 200, header, body} = response ->
         directory = Poison.decode!(body)
         read_and_update_nonce(response)
@@ -73,7 +73,16 @@ defmodule Acme.Client do
     end
   end
 
-  def request(url, payload, opts \\ []) do
+  def request(:get, url) do
+    header = default_request_header()
+    nonce = retrieve_nonce()
+    hackney_opts = [with_body: true]
+    response = :hackney.request(:get, url, header, <<>>, hackney_opts)
+    read_and_update_nonce(response)
+    response
+  end
+
+  def request(method, url, payload, opts \\ []) do
     header = default_request_header()
     nonce = retrieve_nonce()
     payload = Poison.encode! payload
@@ -81,7 +90,7 @@ defmodule Acme.Client do
     jws = encode_payload(payload, account_key(), nonce)
     body = Poison.encode! jws
     hackney_opts = [with_body: true] ++ opts
-    response = :hackney.post(url, header, body, hackney_opts)
+    response = :hackney.request(method, url, header, body, hackney_opts)
     read_and_update_nonce(response)
     response
   end
