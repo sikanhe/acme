@@ -1,5 +1,10 @@
 # Acme
 
+todo:
+- certificate request (csr)
+- revoke cert
+- key change
+
 ## Installation
 
 Add `acme` to your list of dependencies in `mix.exs`:

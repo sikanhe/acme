@@ -29,6 +29,19 @@ defmodule Acme.Client do
     {:ok, pid}
   end
 
+  defp initial_request(pid) do
+    directory_url = Path.join retrieve_server_url(pid), "directory"
+    case request(%Acme.Request{method: :get, url: directory_url}, pid) do
+      {:ok, 200, _header, body} = response ->
+        directory = Poison.decode!(body)
+        read_and_update_nonce(pid, response)
+        update_directory(pid, directory)
+        {:ok, pid}
+      error ->
+        raise "Failed to connect to Acme server at: #{directory_url}, error: #{inspect error}"
+    end
+  end
+
   def retrieve_server_url(pid) do
     Agent.get(pid, fn %{server_url: server_url} -> server_url end)
   end
@@ -52,18 +65,6 @@ defmodule Acme.Client do
   defp default_request_header do
     [{"User-Agent", "Elixir Acme Client #{@client_version}"},
      {"Cache-Control", "no-store"}]
-  end
-
-  defp initial_request(pid) do
-    directory_url = Path.join retrieve_server_url(pid), "directory"
-    case request(%Acme.Request{method: :get, url: directory_url}, pid) do
-      {:ok, 200, _header, body} = response ->
-        directory = Poison.decode!(body)
-        read_and_update_nonce(pid, response)
-        update_directory(pid, directory)
-      error ->
-        raise "Failed to connect to Acme server at: #{directory_url}, error: #{inspect error}"
-    end
   end
 
   def request(request = %Acme.Request{url: nil, resource: resource}, pid) do
