@@ -24,28 +24,29 @@ defmodule Acme.Client do
     if !init_state.private_key,
       do:  raise "You must pass a private key to connect to an Acme server"
 
-    Agent.start_link(fn -> init_state end, name: __MODULE__)
-    initial_request()
+    {:ok, pid} = Agent.start_link(fn -> init_state end)
+    initial_request(pid)
+    {:ok, pid}
   end
 
-  def retrieve_server_url do
-    Agent.get(__MODULE__, fn %{server_url: server_url} -> server_url end)
+  def retrieve_server_url(pid) do
+    Agent.get(pid, fn %{server_url: server_url} -> server_url end)
   end
 
-  def update_directory(directory) do
-    Agent.update(__MODULE__, fn state -> %{state | directory: directory} end)
+  def update_directory(pid, directory) do
+    Agent.update(pid, fn state -> %{state | directory: directory} end)
   end
 
-  def account_key do
-    Agent.get(__MODULE__, fn %{private_key: private_key} -> private_key end)
+  def account_key(pid) do
+    Agent.get(pid, fn %{private_key: private_key} -> private_key end)
   end
 
-  def retrieve_nonce do
-    Agent.get(__MODULE__, fn %{nonce: nonce} -> nonce end)
+  def retrieve_nonce(pid) do
+    Agent.get(pid, fn %{nonce: nonce} -> nonce end)
   end
 
-  def update_nonce(new_nonce) do
-    Agent.update(__MODULE__, fn state -> %{state | nonce: new_nonce} end)
+  def update_nonce(pid, new_nonce) do
+    Agent.update(pid, fn state -> %{state | nonce: new_nonce} end)
   end
 
   defp default_request_header do
@@ -53,46 +54,64 @@ defmodule Acme.Client do
      {"Cache-Control", "no-store"}]
   end
 
-  defp initial_request() do
-    directory_url = Path.join retrieve_server_url(), "directory"
-    case request(:get, directory_url) do
+  defp initial_request(pid) do
+    directory_url = Path.join retrieve_server_url(pid), "directory"
+    case request(%Acme.Request{method: :get, url: directory_url}, pid) do
       {:ok, 200, header, body} = response ->
         directory = Poison.decode!(body)
-        read_and_update_nonce(response)
-        update_directory(directory)
+        read_and_update_nonce(pid, response)
+        update_directory(pid, directory)
       error ->
         raise "Failed to connect to Acme server at: #{directory_url}, error: #{inspect error}"
     end
   end
 
-  def map_resource_to_url(action) do
-    directory = Agent.get(__MODULE__, fn %{directory: directory} -> directory end)
-    case Map.fetch(directory, action) do
+  def map_resource_to_url(pid, resource) do
+    directory = Agent.get(pid, fn %{directory: directory} -> directory end)
+    case Map.fetch(directory, resource) do
       {:ok, url} -> url
-      _ -> raise "No url for action #{action} on this Acme server"
+      _ -> raise "No url for resource #{resource} on this Acme server"
     end
   end
 
-  def request(:get, url) do
+  def request(request = %Acme.Request{url: nil, resource: resource}, pid) do
+    request(%{request | url: map_resource_to_url(pid, resource)}, pid)
+  end
+  def request(%Acme.Request{method: :get, url: url}, pid) do
     header = default_request_header()
-    nonce = retrieve_nonce()
     hackney_opts = [with_body: true]
     response = :hackney.request(:get, url, header, <<>>, hackney_opts)
-    read_and_update_nonce(response)
+    read_and_update_nonce(pid, response)
     response
   end
 
-  def request(method, url, payload, opts \\ []) do
+  def request(%Acme.ChallengeRequest{type: type, uri: uri, token: token}, pid) do
+    thumbprint = JOSE.JWK.thumbprint(account_key(pid))
+    key_auth = "#{token}.#{thumbprint}"
+    request = %Acme.Request{
+      method: :post,
+      resource: "challenge",
+      url: uri,
+      payload: %{
+        resource: "challenge",
+        type: type,
+        keyAuthorization: key_auth
+      }
+    }
+    request(request, pid)
+  end
+
+  def request(%Acme.Request{method: method, url: url, resource: resource, payload: payload}, pid) do
     header = default_request_header()
-    nonce = retrieve_nonce()
-    payload = Poison.encode! payload
-    private_key = Keyword.get(opts, :private_key, account_key())
-    jws = encode_payload(payload, account_key(), nonce)
+    nonce = retrieve_nonce(pid)
+    payload = Poison.encode!(payload)
+    private_key = account_key(pid)
+    jws = encode_payload(payload, account_key(pid), nonce)
     body = Poison.encode! jws
-    hackney_opts = [with_body: true] ++ opts
+    hackney_opts = [with_body: true]
     response = :hackney.request(method, url, header, body, hackney_opts)
-    read_and_update_nonce(response)
-    response
+    read_and_update_nonce(pid, response)
+    handle_response(response, resource)
   end
 
   def handle_response({:ok, 201, header, body}, "new-reg") do
@@ -118,9 +137,9 @@ defmodule Acme.Client do
   @doc """
   Fetch the Replay-Nonce value from response header
   """
-  def read_and_update_nonce({_, _, header, _}) do
+  def read_and_update_nonce(pid, {_, _, header, _}) do
     Enum.find_value(header, fn
-      {"Replay-Nonce", nonce} -> update_nonce(nonce)
+      {"Replay-Nonce", nonce} -> update_nonce(pid, nonce)
       _ -> nil
     end)
   end
