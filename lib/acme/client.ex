@@ -3,7 +3,15 @@ defmodule Acme.Client do
 
   @client_version Mix.Project.config[:version]
 
-  defmodule Error do
+  defmodule MissingServerURLError do
+    defexception [:message]
+  end
+
+  defmodule MissingPrivateKeyError do
+    defexception [:message]
+  end
+
+  defmodule ConnectionError do
     defexception [:message]
   end
 
@@ -16,15 +24,15 @@ defmodule Acme.Client do
   * `private_key` - A private_key either in PEM format or as a JWK map
   """
   def start_link(opts) do
-    server_url = Keyword.get(opts, :server) || raise Acme.Client.Error, """
+    server_url = Keyword.get(opts, :server) || raise Acme.Client.MissingServerURLError, """
       You must pass a server url to connect to an Acme server
     """
-    private_key = Keyword.get(opts, :private_key) || raise Acme.Client.Error, """
+    private_key = Keyword.get(opts, :private_key) || raise Acme.Client.MissingPrivateKeyError, """
       You must pass a valid private key to connect to an Acme server
     """
     init_state = %{
       nonce: nil,
-      directory: nil,
+      endpoints: nil,
       server_url: server_url,
       private_key: private_key
     }
@@ -37,12 +45,14 @@ defmodule Acme.Client do
     directory_url = Path.join retrieve_server_url(pid), "directory"
     case request(%Acme.Request{method: :get, url: directory_url}, pid) do
       {:ok, 200, _header, body} = response ->
-        directory = Poison.decode!(body)
+        endpoints = Poison.decode!(body)
         read_and_update_nonce(pid, response)
-        update_directory(pid, directory)
+        update_endpoints(pid, endpoints)
         {:ok, pid}
       error ->
-        raise "Failed to connect to Acme server at: #{directory_url}, error: #{inspect error}"
+        raise Acme.Client.ConnectionError, """
+          Failed to connect to Acme server at: #{directory_url}, error: #{inspect error}
+        """
     end
   end
 
@@ -50,8 +60,8 @@ defmodule Acme.Client do
     Agent.get(pid, fn %{server_url: server_url} -> server_url end)
   end
 
-  def update_directory(pid, directory) do
-    Agent.update(pid, fn state -> %{state | directory: directory} end)
+  def update_endpoints(pid, directory) do
+    Agent.update(pid, fn state -> %{state | endpoints: directory} end)
   end
 
   def account_key(pid) do
@@ -141,11 +151,14 @@ defmodule Acme.Client do
   end
 
   defp map_resource_to_url(pid, resource) do
-    directory = Agent.get(pid, fn %{directory: directory} -> directory end)
-    case Map.fetch(directory, resource) do
-      {:ok, url} -> url
-      _ -> raise "No url for resource #{resource} on this Acme server"
-    end
+    Agent.get(pid, fn %{endpoints: endpoints} ->
+      case Map.fetch(endpoints, resource) do
+        {:ok, url} -> url
+        _ -> raise Acme.Request.Error, """
+            No endpoint found for the resource `#{resource}` on the Acme server
+          """
+      end
+    end)
   end
 
   defp read_and_update_nonce(pid, {_, _, header, _}) do

@@ -22,8 +22,14 @@ defmodule Acme.ClientTest do
   end
 
   test "missing server url" do
-    assert_raise Acme.Client.Error, fn ->
+    assert_raise Acme.Client.MissingServerURLError, fn ->
       Acme.Client.start_link([])
+    end
+  end
+
+   test "missing private key" do
+    assert_raise Acme.Client.MissingPrivateKeyError, fn ->
+      Acme.Client.start_link([server: "abc.com"])
     end
   end
 end
