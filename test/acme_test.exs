@@ -1,5 +1,5 @@
 defmodule AcmeTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   doctest Acme
 
   setup do

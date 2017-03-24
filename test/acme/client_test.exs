@@ -2,14 +2,15 @@ defmodule Acme.ClientTest do
   use ExUnit.Case
   alias Acme.{Client}
   alias JOSE.{JWK, JWS}
+  doctest Acme.Client
 
   test "encode payload as JWS" do
-    payload = %{"hello" => "world"} |> Poison.encode!
-    nonce = "abc"
+    payload = "hello world"
+    nonce = "PqwemD"
     alg = "ES256"
     {_, private_key} = JOSE.JWS.generate_key(%{"alg" => alg}) |> JWK.to_map()
     jwk_public = private_key |> JWK.to_public()
-    jws = Client.encode_payload(payload, private_key, nonce)
+    jws = Client.encode_payload(payload, private_key, nonce) |> Poison.decode!
     # Check if protected contains nonce
     protected = JWS.peek_protected(jws) |> Poison.decode!
     assert protected["nonce"] == nonce
