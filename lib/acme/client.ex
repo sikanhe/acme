@@ -1,16 +1,35 @@
-defmodule Acme.Request do
-  alias JOSE.{JWK, JWS, JWE}
-  @default_server "https://acme-staging.api.letsencrypt.org"
+defmodule Acme.Client do
+  alias JOSE.{JWK, JWS}
 
+  @client_version Mix.Project.config[:version]
+
+  @doc """
+  Start the Acme client.
+
+  Supports following options(both are required):
+
+  * `server_url` - The Acme server url
+  * `private_key` - A private_key either in PEM format or as a JWK map
+  """
   def start_link(opts) do
-    server_url = Keyword.get(opts, :server, @default_server)
-    private_key = Keyword.get(opts, :private_key)
-    if !private_key do
-      raise "You must pass a private key to connect to an Acme server"
-    end
-    init_state = %{nonce: nil, directory: nil, server_url: server_url, private_key: private_key}
+    init_state = %{
+      nonce: nil,
+      directory: nil,
+      server_url: Keyword.get(opts, :server),
+      private_key: Keyword.get(opts, :private_key)
+    }
+
+    if !init_state.server_url,
+      do: raise "You must pass an Acme server_url to connect to an Acme server"
+    if !init_state.private_key,
+      do:  raise "You must pass a private key to connect to an Acme server"
+
     Agent.start_link(fn -> init_state end, name: __MODULE__)
-    initial_request(server_url)
+    initial_request()
+  end
+
+  def retrieve_server_url do
+    Agent.get(__MODULE__, fn %{server_url: server_url} -> server_url end)
   end
 
   def update_directory(directory) do
@@ -29,13 +48,13 @@ defmodule Acme.Request do
     Agent.update(__MODULE__, fn state -> %{state | nonce: new_nonce} end)
   end
 
-  def default_request_header do
-     [{"User-Agent", "Elixir Acme 0.1.0"},
-      {"Cache-Control", "no-store"}]
+  defp default_request_header do
+    [{"User-Agent", "Elixir Acme Client #{@client_version}"},
+     {"Cache-Control", "no-store"}]
   end
 
-  def initial_request(server_url) do
-    directory_url = Path.join server_url, "directory"
+  defp initial_request() do
+    directory_url = Path.join retrieve_server_url(), "directory"
     case :hackney.get(directory_url, default_request_header(), <<>>, [with_body: true]) do
       {:ok, 200, header, body} = response ->
         directory = Poison.decode!(body)
@@ -46,7 +65,7 @@ defmodule Acme.Request do
     end
   end
 
-  def map_action_to_url(action) do
+  def map_resouce_to_url(action) do
     directory = Agent.get(__MODULE__, fn %{directory: directory} -> directory end)
     case Map.fetch(directory, action) do
       {:ok, url} -> url
@@ -58,6 +77,7 @@ defmodule Acme.Request do
     header = default_request_header()
     nonce = retrieve_nonce()
     payload = Poison.encode! payload
+    private_key = Keyword.get(opts, :private_key, account_key())
     jws = encode_payload(payload, account_key(), nonce)
     body = Poison.encode! jws
     hackney_opts = [with_body: true] ++ opts
@@ -70,14 +90,14 @@ defmodule Acme.Request do
     response = Poison.decode! body
     {:ok, Acme.Registration.from_response(header, response)}
   end
-  def handle_response({:ok, 202, header, body}, "reg") do
+  def handle_response({:ok, 202, _header, body}, "reg") do
     response = Poison.decode! body
     {:ok, Acme.Registration.from_response(header, response)}
   end
-  def handle_response({:ok, 201, header, body}, "new-authz") do
+  def handle_response({:ok, 201, _header, body}, "new-authz") do
     {:ok, Acme.Authorization.from_map(Poison.decode!(body))}
   end
-  def handle_response({:ok, status, _header, body}, _) do
+  def handle_response({:ok, _status, _header, body}, _) do
     error = Poison.decode!(body)
     {:error, Acme.Error.from_map(error)}
   end

@@ -3,10 +3,6 @@ defmodule Acme.Authorization do
 
   alias Acme.{Identifier, Challenge}
 
-  def verify_status(authorization) do
-
-  end
-
   def from_map(%{
     "expires" => expires_iso8601,
     "identifier" => identifier,

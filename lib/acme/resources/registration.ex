@@ -29,14 +29,4 @@ defmodule Acme.Registration do
       end
     end)
   end
-
-  def get_terms(%__MODULE__{term_of_service_url: url}) do
-    {:ok, 200, _headers, body} = Acme.request(:get, url, <<>>)
-    {:ok, body}
-  end
-
-  def agree_terms(%__MODULE__{term_of_service_url: terms_url}) do
-    Acme.request(:post, "reg", %{resource: "reg", agreement: terms_url})
-    Acme.Request.request("reg",  %{resource: "reg", agreement: terms_url})
-  end
 end
