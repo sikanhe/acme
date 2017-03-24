@@ -57,20 +57,12 @@ defmodule Acme.Client do
   defp initial_request(pid) do
     directory_url = Path.join retrieve_server_url(pid), "directory"
     case request(%Acme.Request{method: :get, url: directory_url}, pid) do
-      {:ok, 200, header, body} = response ->
+      {:ok, 200, _header, body} = response ->
         directory = Poison.decode!(body)
         read_and_update_nonce(pid, response)
         update_directory(pid, directory)
       error ->
         raise "Failed to connect to Acme server at: #{directory_url}, error: #{inspect error}"
-    end
-  end
-
-  def map_resource_to_url(pid, resource) do
-    directory = Agent.get(pid, fn %{directory: directory} -> directory end)
-    case Map.fetch(directory, resource) do
-      {:ok, url} -> url
-      _ -> raise "No url for resource #{resource} on this Acme server"
     end
   end
 
@@ -84,7 +76,6 @@ defmodule Acme.Client do
     read_and_update_nonce(pid, response)
     response
   end
-
   def request(%Acme.ChallengeRequest{type: type, uri: uri, token: token}, pid) do
     thumbprint = JOSE.JWK.thumbprint(account_key(pid))
     key_auth = "#{token}.#{thumbprint}"
@@ -100,13 +91,12 @@ defmodule Acme.Client do
     }
     request(request, pid)
   end
-
   def request(%Acme.Request{method: method, url: url, resource: resource, payload: payload}, pid) do
     header = default_request_header()
     nonce = retrieve_nonce(pid)
     payload = Poison.encode!(payload)
     private_key = account_key(pid)
-    jws = encode_payload(payload, account_key(pid), nonce)
+    jws = encode_payload(payload, private_key, nonce)
     body = Poison.encode! jws
     hackney_opts = [with_body: true]
     response = :hackney.request(method, url, header, body, hackney_opts)
@@ -134,10 +124,15 @@ defmodule Acme.Client do
     {:error, Acme.Error.from_map(error)}
   end
 
-  @doc """
-  Fetch the Replay-Nonce value from response header
-  """
-  def read_and_update_nonce(pid, {_, _, header, _}) do
+  defp map_resource_to_url(pid, resource) do
+    directory = Agent.get(pid, fn %{directory: directory} -> directory end)
+    case Map.fetch(directory, resource) do
+      {:ok, url} -> url
+      _ -> raise "No url for resource #{resource} on this Acme server"
+    end
+  end
+
+  defp read_and_update_nonce(pid, {_, _, header, _}) do
     Enum.find_value(header, fn
       {"Replay-Nonce", nonce} -> update_nonce(pid, nonce)
       _ -> nil

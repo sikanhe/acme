@@ -2,7 +2,7 @@ defmodule Acme do
   @moduledoc """
   Acme client
   """
-  alias Acme.{Client, Registration, Authorization, Challenge, Error}
+  alias Acme.{Registration, Authorization, Challenge, Error}
 
   defdelegate request(request, pid), to: Acme.Client
 
@@ -14,7 +14,7 @@ defmodule Acme do
   * `terms_of_service_agree` - If set to `true`, you agreesto the TOS when signing up. Defaults to `false`.
   """
   @spec register(binary) :: {:ok, Registration.t} | {:error, Error.t}
-  def register(contact, opts \\ []) do
+  def register(contact) do
     %Acme.Request{
       method: :post,
       resource: "new-reg",
