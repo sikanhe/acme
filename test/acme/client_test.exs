@@ -1,5 +1,5 @@
 defmodule Acme.ClientTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   alias Acme.{Client}
   alias JOSE.{JWK, JWS}
   doctest Acme.Client
@@ -31,5 +31,27 @@ defmodule Acme.ClientTest do
     assert_raise Acme.Client.MissingPrivateKeyError, fn ->
       Acme.Client.start_link([server: "abc.com"])
     end
+  end
+
+  test "invalid private key" do
+    assert_raise Acme.Client.InvalidPrivateKeyError, fn ->
+      Acme.Client.start_link([server: "abc.com", private_key: "abc.com"])
+    end
+
+    assert_raise Acme.Client.InvalidPrivateKeyError, fn ->
+      Acme.Client.start_link([server: "abc.com", private_key: %{}])
+    end
+
+    assert_raise Acme.Client.InvalidPrivateKeyError, fn ->
+      Acme.Client.start_link([server: "abc.com", private_key_file: "invalid/path"])
+    end
+
+    tmp_dir = Path.join System.tmp_dir!, "acme_test.pem"
+    {_, jwk} = JOSE.JWK.generate_key({:ec, "P-384"}) |> JOSE.JWK.to_map()
+    {_, file} = JOSE.JWK.to_file(tmp_dir, jwk)
+    server = "https://acme-staging.api.letsencrypt.org"
+
+    assert {:ok, _pid} = Acme.Client.start_link([server: server, private_key_file: file])
+    assert {:ok, _pid} = Acme.Client.start_link([server: server, private_key: jwk])
   end
 end

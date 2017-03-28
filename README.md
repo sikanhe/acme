@@ -3,7 +3,6 @@
 todo:
 - certificate request (csr)
 - revoke cert
-- key change
 
 ## Installation
 

@@ -15,6 +15,13 @@ defmodule Acme.Client do
     """
   end
 
+  defmodule InvalidPrivateKeyError do
+    defexception message: """
+      You must pass a valid private key to connect to an Acme server
+    """
+  end
+
+
   defmodule ConnectionError do
     defexception [:message]
   end
@@ -29,7 +36,12 @@ defmodule Acme.Client do
   """
   def start_link(opts) do
     server_url = Keyword.get(opts, :server) || raise Acme.Client.MissingServerURLError
-    private_key = Keyword.get(opts, :private_key) || raise Acme.Client.MissingPrivateKeyError
+    private_key =
+      if key = Keyword.get(opts, :private_key) do
+        validate_private_key(key)
+      else
+        validate_private_key_file(Keyword.get(opts, :private_key_file))
+      end
     init_state = %{
       nonce: nil,
       endpoints: nil,
@@ -40,6 +52,43 @@ defmodule Acme.Client do
     initial_request(pid)
     {:ok, pid}
   end
+
+  defp validate_private_key_file(nil) do
+    raise Acme.Client.MissingPrivateKeyError
+  end
+  defp validate_private_key_file(file_path) do
+    try do
+      {_, jwk_map} = JWK.from_file(file_path) |> JWK.to_map()
+      jwk_map
+    rescue
+      _ ->
+      raise Acme.Client.InvalidPrivateKeyError, message: """
+        Could not correctly parse the private key at path #{file_path}
+      """
+    end
+  end
+
+  defp validate_private_key(nil) do
+    raise Acme.Client.MissingPrivateKeyError
+  end
+  defp validate_private_key(map) when is_map(map) do
+    try do
+      %JWK{} = JWK.from_map(map)
+      map
+    rescue
+      _ -> raise Acme.Client.InvalidPrivateKeyError
+    end
+  end
+  defp validate_private_key(pem) when is_bitstring(pem) do
+    case JWK.from_pem(pem) do
+      jwk = %JWK{} ->
+        {:ok, jwk_map} = JWK.to_map(jwk)
+        jwk_map
+      _ ->
+        raise Acme.Client.InvalidPrivateKeyError
+    end
+  end
+
 
   defp initial_request(pid) do
     directory_url = Path.join retrieve_server_url(pid), "directory"
@@ -111,7 +160,11 @@ defmodule Acme.Client do
     nonce = retrieve_nonce(pid)
     payload = Poison.encode!(payload)
     private_key = account_key(pid)
-    jws = sign_jws(payload, private_key, %{"resource" => resource, "nonce" => nonce})
+    jws = sign_jws(payload, private_key, %{
+      "url" => url,
+      "resource" => resource,
+      "nonce" => nonce
+    })
     body = Poison.encode!(jws)
     hackney_opts = [with_body: true]
     response = :hackney.request(method, url, header, body, hackney_opts)
