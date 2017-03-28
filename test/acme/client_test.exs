@@ -10,7 +10,7 @@ defmodule Acme.ClientTest do
     alg = "ES256"
     {_, private_key} = JOSE.JWS.generate_key(%{"alg" => alg}) |> JWK.to_map()
     jwk_public = private_key |> JWK.to_public()
-    jws = Client.encode_payload(payload, private_key, nonce) |> Poison.decode!
+    jws = Client.sign_jws(payload, private_key, %{"nonce" => nonce})
     # Check if protected contains nonce
     protected = JWS.peek_protected(jws) |> Poison.decode!
     assert protected["nonce"] == nonce
@@ -27,7 +27,7 @@ defmodule Acme.ClientTest do
     end
   end
 
-   test "missing private key" do
+  test "missing private key" do
     assert_raise Acme.Client.MissingPrivateKeyError, fn ->
       Acme.Client.start_link([server: "abc.com"])
     end

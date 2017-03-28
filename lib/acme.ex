@@ -22,13 +22,17 @@ defmodule Acme do
 
   """
   @spec register(binary) :: Acme.Request.t
-  def register(contact) do
+  @spec register(list) :: Acme.Request.t
+  def register(contact) when is_bitstring(contact) do
+    register([contact])
+  end
+  def register(contact) when is_list(contact) do
     %Acme.Request{
       method: :post,
       resource: "new-reg",
       payload: %{
         resource: "new-reg",
-        contact: [contact]
+        contact: contact
       }
     }
   end

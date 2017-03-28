@@ -111,7 +111,8 @@ defmodule Acme.Client do
     nonce = retrieve_nonce(pid)
     payload = Poison.encode!(payload)
     private_key = account_key(pid)
-    body = encode_payload(payload, private_key, nonce)
+    jws = sign_jws(payload, private_key, %{"resource" => resource, "nonce" => nonce})
+    body = Poison.encode!(jws)
     hackney_opts = [with_body: true]
     response = :hackney.request(method, url, header, body, hackney_opts)
     read_and_update_nonce(pid, response)
@@ -169,18 +170,16 @@ defmodule Acme.Client do
   end
 
   @doc """
-  Encodes a payload with a private key and a replay-nonce.
-  Takes a
+  Encodes a payload into JWS map with a private key and a replay-nonce.
   """
-  def encode_payload(payload, private_key, nonce) do
+  def sign_jws(payload, private_key, extra_protected_header \\ %{}) do
     {_, jwk} = JWK.to_public_map(private_key)
     protected = %{
       "alg" => jwk_to_alg(jwk),
-      "jwk" => jwk,
-      "nonce" => nonce
-    }
+      "jwk" => jwk
+    } |> Map.merge(extra_protected_header)
     {_, jws} = JWS.sign(private_key, payload, protected)
-    Poison.encode! jws
+    jws
   end
 
   defp jwk_to_alg(%{"kty" => "RSA"}), do: "RS256"
