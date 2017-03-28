@@ -29,10 +29,13 @@ defmodule Acme.Client do
   @doc """
   Start the Acme client.
 
-  Supports following options(both are required):
+  Supports following options:
 
   * `server_url` - The Acme server url
-  * `private_key` - A private_key either in PEM format or as a JWK map
+  * `private_key` - A private_key either in PEM format or as a JWK map, this is
+  required unless you use `private_key_file` option
+  * `private_key_file` - Instead of a private key map/pem value, you can also pass
+  a private key file path
   """
   def start_link(opts) do
     server_url = Keyword.get(opts, :server) || raise Acme.Client.MissingServerURLError
