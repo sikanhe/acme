@@ -21,7 +21,6 @@ defmodule Acme.Client do
     """
   end
 
-
   defmodule ConnectionError do
     defexception [:message]
   end
@@ -92,13 +91,10 @@ defmodule Acme.Client do
     end
   end
 
-
   defp initial_request(pid) do
     directory_url = Path.join retrieve_server_url(pid), "directory"
-    case request(%Acme.Request{method: :get, url: directory_url}, pid) do
-      {:ok, 200, _header, body} = response ->
-        endpoints = Poison.decode!(body)
-        read_and_update_nonce(pid, response)
+    case request(%Acme.Request{method: :get, url: directory_url, resource: "directory"}, pid) do
+      {:ok, endpoints} ->
         update_endpoints(pid, endpoints)
         {:ok, pid}
       error ->
@@ -136,16 +132,16 @@ defmodule Acme.Client do
   def request(request = %Acme.Request{url: nil, resource: resource}, pid) do
     request(%{request | url: map_resource_to_url(pid, resource)}, pid)
   end
-  def request(%Acme.Request{method: :get, url: url}, pid) do
+  def request(%Acme.Request{method: :get, url: url, resource: resource}, pid) do
     header = default_request_header()
     hackney_opts = [with_body: true]
-    response = :hackney.request(:get, url, header, <<>>, hackney_opts)
-    read_and_update_nonce(pid, response)
-    response
+    response = {_, _, header, _} = :hackney.request(:get, url, header, <<>>, hackney_opts)
+    nonce = find_response_header_value(header, "Replay-Nonce")
+    update_nonce(pid, nonce)
+    handle_response(response, resource)
   end
   def request(%Acme.ChallengeRequest{type: type, uri: uri, token: token}, pid) do
-    thumbprint = JOSE.JWK.thumbprint(account_key(pid))
-    key_auth = "#{token}.#{thumbprint}"
+    key_auth = Acme.Challenge.create_key_authorization(token, account_key(pid))
     request = %Acme.Request{
       method: :post,
       resource: "challenge",
@@ -159,7 +155,6 @@ defmodule Acme.Client do
     request(request, pid)
   end
   def request(%Acme.Request{method: method, url: url, resource: resource, payload: payload}, pid) do
-    header = default_request_header()
     nonce = retrieve_nonce(pid)
     payload = Poison.encode!(payload)
     private_key = account_key(pid)
@@ -168,10 +163,12 @@ defmodule Acme.Client do
       "resource" => resource,
       "nonce" => nonce
     })
-    body = Poison.encode!(jws)
+    req_header = default_request_header()
+    req_body = Poison.encode!(jws)
     hackney_opts = [with_body: true]
-    response = :hackney.request(method, url, header, body, hackney_opts)
-    read_and_update_nonce(pid, response)
+    response = {_, _, header, _} = :hackney.request(method, url, req_header, req_body, hackney_opts)
+    nonce = find_response_header_value(header, "Replay-Nonce")
+    update_nonce(pid, nonce)
     handle_response(response, resource)
   end
 
@@ -187,6 +184,9 @@ defmodule Acme.Client do
     end
   end
 
+  defp handle_response({:ok, 200, _header, body}, "directory") do
+    {:ok, Poison.decode!(body)}
+  end
   defp handle_response({:ok, 201, header, body}, "new-reg") do
     response = Poison.decode! body
     {:ok, Acme.Registration.from_response(header, response)}
@@ -202,9 +202,27 @@ defmodule Acme.Client do
     challenge = Poison.decode!(body)
     {:ok, Acme.Challenge.from_map(challenge)}
   end
+  defp handle_response({:ok, 201, header, _body}, "new-cert") do
+    cert_url = find_response_header_value(header, "Location")
+    {:ok, cert_url}
+  end
+  defp handle_response({:ok, 202, header, _body}, "new-cert") do
+    retry_after = find_response_header_value(header, "Retry-After")
+    {:accepted, retry_after: retry_after}
+  end
+  defp handle_response({:ok, 200, _header, cert}, "cert") do
+    {:ok, cert}
+  end
   defp handle_response({:ok, status, _header, body}, _) when status > 299 do
     error = Poison.decode!(body)
     {:error, Acme.Error.from_map(error)}
+  end
+
+  defp find_response_header_value(header, key) do
+    Enum.find_value(header, fn
+      {^key, value} -> value
+      _ -> nil
+    end)
   end
 
   defp map_resource_to_url(pid, resource) do
@@ -215,13 +233,6 @@ defmodule Acme.Client do
             No endpoint found for the resource `#{resource}` on the Acme server
           """
       end
-    end)
-  end
-
-  defp read_and_update_nonce(pid, {_, _, header, _}) do
-    Enum.find_value(header, fn
-      {"Replay-Nonce", nonce} -> update_nonce(pid, nonce)
-      _ -> nil
     end)
   end
 

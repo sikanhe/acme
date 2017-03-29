@@ -144,6 +144,20 @@ defmodule Acme do
     }
   end
 
+  @doc """
+  Takes an CSR in DER format and builds a request for a new certificate
+
+  When called with `&Acme.request/1`, it returns a `{:ok, certificate_url}`
+  or `{:error, %Acme.Error{}}` tuple.
+
+  ## Example:
+
+      {:ok, conn} = Acme.Client.start_link(server: ..., private_key: ...)
+      Acme.new_certificate("5jNudRx6Ye4HzKEqT5...FS6aKdZeGsysoCo4H9P")
+      |> Acme.request(conn)
+      #=> {:ok, "https://example.com/acme/cert/asdf"}
+
+  """
   def new_certificate(csr) do
     %Acme.Request{
       method: :post,
@@ -152,6 +166,25 @@ defmodule Acme do
         resource: "new-cert",
         csr: Base.url_decode64(csr)
       }
+    }
+  end
+
+  @doc """
+  Get a certificate by its URL
+
+  ## Example:
+
+      {:ok, conn} = Acme.Client.start_link(server: ..., private_key: ...)
+      Acme.get_certificate("https://example.com/acme/cert/asdf")
+      |> Acme.request(conn)
+      #=> {:ok, [DER-encoded certificate]}
+
+  """
+  def get_certificate(url) do
+    %Acme.Request{
+      method: :get,
+      url: url,
+      resource: "cert"
     }
   end
 end
