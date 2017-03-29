@@ -121,7 +121,7 @@ defmodule Acme do
   end
 
   @doc """
-  Takes an `%Acme.Challenge{}` struct and builds an `%Acme.Request{}` to
+  Takes an `%Acme.Challenge{}` struct and builds an `%Acme.ChallengeRequest{}` to
   respond to a specific challenge.
 
   When called with `&Acme.request/1`, it returns a `{:ok, %Acme.Chellenge{}}`
@@ -145,7 +145,7 @@ defmodule Acme do
   end
 
   @doc """
-  Takes an CSR in DER format and builds a request for a new certificate
+  Takes an CSR in DER format and builds an `%Acme.Request{}` for a new certificate
 
   When called with `&Acme.request/1`, it returns a `{:ok, certificate_url}`
   or `{:error, %Acme.Error{}}` tuple.
