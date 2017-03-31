@@ -224,7 +224,7 @@ defmodule Acme do
       resource: "revoke-cert",
       payload: %{
         resource: "revoke-cert",
-        certificate: Base.url_encode64(csr, padding: false),
+        certificate: Base.url_encode64(certificate_der, padding: false),
         reason: reason
       }
     }
