@@ -45,6 +45,7 @@ defmodule AcmeTest do
   test "get a new certificate", %{client: client} do
     prepare_account(client)
     key_path = Path.join System.tmp_dir!, "test_csr_ec.pem"
+    {:ok, _} = Acme.OpenSSL.generate_key({:rsa, 2048}, key_path)
     {:ok, csr} = Acme.OpenSSL.generate_csr(key_path, %{common_name: "example.com"})
     assert {:error, %Acme.Error{status: err_status, detail: err_detail}} =
       Acme.new_certificate(csr)
