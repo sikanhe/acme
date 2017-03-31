@@ -82,9 +82,9 @@ subject = %{
   common_name: "example.acme.com",
   organization_name: "Acme INC.",
   organizational_unit: "HR",
-  locality_name: "New York",
-  state_or_province: "NY",
-  country_name: "United States"
+  locality_name: "Philadelphia",
+  state_or_province: "Pennsylvania",
+  country_name: "US"
 }
 
 # Generate a CSR in DER format
