@@ -32,8 +32,8 @@ defmodule Acme.Mixfile do
      {:poison, "~> 3.1.0"},
      {:jose, "~> 1.8.2"},
      # Docs
-     {:ex_doc, "~> 0.10", only: :dev},
-     {:earmark, "~> 0.1", only: :dev},
+     {:ex_doc, "~> 0.15", only: :dev},
+     {:earmark, "~> 1.2", only: :dev},
      {:inch_ex, ">= 0.0.0", only: :dev}]
   end
 end
