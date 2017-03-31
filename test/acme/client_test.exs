@@ -17,8 +17,7 @@ defmodule Acme.ClientTest do
     assert protected["alg"] == alg
     assert JWS.peek_payload(jws) == payload
     # Verify it was signed correctly
-    compact = JWS.compact(jws)
-    assert JWS.verify_strict(jwk_public, [alg], compact) |> elem(0) == true
+    assert JWS.verify_strict(jwk_public, [alg], jws) |> elem(0) == true
   end
 
   test "missing server url" do
@@ -47,11 +46,11 @@ defmodule Acme.ClientTest do
     end
 
     tmp_dir = Path.join System.tmp_dir!, "acme_test.pem"
-    {_, jwk} = JOSE.JWK.generate_key({:ec, "P-384"}) |> JOSE.JWK.to_map()
-    {_, file} = JOSE.JWK.to_file(tmp_dir, jwk)
+    {:ok, key_file} = Acme.OpenSSL.generate_key({:rsa, 2048}, tmp_dir)
+    {:ok, key} = Acme.OpenSSL.generate_key({:rsa, 2048})
     server = "https://acme-staging.api.letsencrypt.org"
 
-    assert {:ok, _pid} = Acme.Client.start_link([server: server, private_key_file: file])
-    assert {:ok, _pid} = Acme.Client.start_link([server: server, private_key: jwk])
+    assert {:ok, _pid} = Acme.Client.start_link([server: server, private_key: key])
+    assert {:ok, _pid} = Acme.Client.start_link([server: server, private_key_file: key_file])
   end
 end

@@ -1,9 +1,5 @@
 # Acme
 
-todo:
-- certificate request (csr)
-- revoke cert
-
 ## Installation
 
 Add `acme` to your list of dependencies in `mix.exs`:
@@ -64,7 +60,7 @@ Acme.authorize("yourdomain.com") |> Acme.request(conn)
 }}
 ```
 
-### Reponde to a challenge
+### Respond to a challenge
 ```elixir
 {:ok, conn} = Acme.Client.start_link(server: ..., private_key: ...)
 challenge = %Acme.Challenge{type: "http-01", token: ...}

@@ -1,7 +1,5 @@
 defmodule Acme do
-  @moduledoc """
-  Acme client
-  """
+  @moduledoc File.read!(Path.expand("./README.md"))
 
   @spec request(Acme.Request.t, pid) :: {:ok, term} | {:error, Acme.Error.t}
   defdelegate request(request, pid), to: Acme.Client
@@ -185,6 +183,50 @@ defmodule Acme do
       method: :get,
       url: url,
       resource: "cert"
+    }
+  end
+
+
+  @doc """
+  Takes a certificate in DER format and a reason code and builds
+  an `%Acme.Request{}` to revoke a certificate. When called
+  with `&Acme.request/1`, it returns either `:ok` or
+  `{:error, %Acme.Error{}}`.
+
+  Possible reason codes:
+
+      unspecified             (0) <-- default,
+      keyCompromise           (1),
+      cACompromise            (2),
+      affiliationChanged      (3),
+      superseded              (4),
+      cessationOfOperation    (5),
+      certificateHold         (6),
+            -- value 7 is not used
+      removeFromCRL           (8),
+      privilegeWithdrawn      (9),
+      aACompromise           (10)
+
+  More information about reason at:
+  https://tools.ietf.org/html/rfc5280#section-5.3.1
+
+  ## Example:
+
+      {:ok, conn} = Acme.Client.start_link(server: ..., private_key: ...)
+      Acme.revoke_certificate("5jNudRx6Ye4HzKEqT5...FS6aKdZeGsysoCo4H9P", 1)
+      |> Acme.request(conn)
+      #=> {:ok, "https://example.com/acme/cert/asdf"}
+
+  """
+  def revoke_certificate(certificate_der, reason \\ 0) do
+    %Acme.Request{
+      method: :post,
+      resource: "revoke-cert",
+      payload: %{
+        resource: "revoke-cert",
+        certificate: Base.url_decode64(certificate_der),
+        reason: reason
+      }
     }
   end
 end

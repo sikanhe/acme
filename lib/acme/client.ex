@@ -60,8 +60,12 @@ defmodule Acme.Client do
   end
   defp validate_private_key_file(file_path) do
     try do
-      {_, jwk_map} = JWK.from_file(file_path) |> JWK.to_map()
-      jwk_map
+      {_, jwk} =
+        file_path
+        |> File.read!()
+        |> JWK.from_pem()
+        |> JWK.to_map()
+      jwk
     rescue
       _ ->
       raise Acme.Client.InvalidPrivateKeyError, message: """
@@ -73,21 +77,20 @@ defmodule Acme.Client do
   defp validate_private_key(nil) do
     raise Acme.Client.MissingPrivateKeyError
   end
-  defp validate_private_key(map) when is_map(map) do
+  defp validate_private_key(jwk) when is_map(jwk) do
     try do
-      %JWK{} = JWK.from_map(map)
-      map
+      %JWK{} = JWK.from_map(jwk)
+      jwk
     rescue
       _ -> raise Acme.Client.InvalidPrivateKeyError
     end
   end
   defp validate_private_key(pem) when is_bitstring(pem) do
-    case JWK.from_pem(pem) do
-      jwk = %JWK{} ->
-        {:ok, jwk_map} = JWK.to_map(jwk)
-        jwk_map
-      _ ->
-        raise Acme.Client.InvalidPrivateKeyError
+    try do
+      {%{kty: _}, jwk} = pem |> JWK.from_pem() |> JWK.to_map()
+      jwk
+    rescue
+      _ -> raise Acme.Client.InvalidPrivateKeyError
     end
   end
 
@@ -252,5 +255,5 @@ defmodule Acme.Client do
   defp jwk_to_alg(%{"kty" => "RSA"}), do: "RS256"
   defp jwk_to_alg(%{"kty" => "EC", "crv" => "P-256"}), do: "ES256"
   defp jwk_to_alg(%{"kty" => "EC", "crv" => "P-384"}), do: "ES384"
-  defp jwk_to_alg(%{"kty" => "EC", "crv" => "P-512"}), do: "ES512"
+  defp jwk_to_alg(%{"kty" => "EC", "crv" => "P-521"}), do: "ES512"
 end
