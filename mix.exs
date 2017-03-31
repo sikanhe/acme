@@ -1,13 +1,25 @@
 defmodule Acme.Mixfile do
   use Mix.Project
 
+  def description do
+    "Acme (Let's Encrypt) Client for Elixir"
+  end
+
   def project do
     [app: :acme,
      version: "0.2.0",
      elixir: "~> 1.4",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
-     deps: deps()]
+     deps: deps(),
+     description: description()]
+  end
+
+  def package do
+    [maintainers: ["Sikan He"],
+     licenses: ["MIT"],
+     links: %{github: "https://github.com/sikanhe/acme"}],
+     files: ["lib", "config", "mix.exs", "README*"]
   end
 
   def application do
