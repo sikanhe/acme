@@ -35,11 +35,15 @@ certificates for different accounts.
 
 ## Examples
 
-### Register an account
+### Staring a connection
+Acme.Client.start_link(server: ..., private_key: ...)
+#=> {:ok, conn}
 
+We are going to reuse this connection for all examples below
+
+### Register an account
 ```elixir
-{:ok, conn} = Acme.Client.start_link(server: ..., private_key: ...)
-{:ok, registration} = Acme.register("mailto:acme@example.com") |> Acme.request(conn)
+Acme.register("mailto:acme@example.com") |> Acme.request(conn)
 #=> {:ok, %Registration{...}}
 # Agree to terms
 Acme.agree_terms(registration) |> Acme.request(conn)
@@ -47,7 +51,6 @@ Acme.agree_terms(registration) |> Acme.request(conn)
 
 ### Get new authorization for domain
 ```elixir
-{:ok, conn} = Acme.Client.start_link(server: ..., private_key: ...)
 Acme.authorize("yourdomain.com") |> Acme.request(conn)
 #=> {:ok, %Authorization{
   status: "pending",
@@ -62,7 +65,6 @@ Acme.authorize("yourdomain.com") |> Acme.request(conn)
 
 ### Respond to a challenge
 ```elixir
-{:ok, conn} = Acme.Client.start_link(server: ..., private_key: ...)
 challenge = %Acme.Challenge{type: "http-01", token: ...}
 Acme.respond_challenge(challenge) |> Acme.request(conn)
 #=> {:ok, %Challenge{status: "pending", ...}}
