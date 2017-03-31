@@ -97,17 +97,16 @@ Acme.new_certificate(csr) |> Acme.request(conn)
 # Fetch the certificate using the URL
 Acme.get_certificate("https://example.com/acme/cert/asdf")
 |> Acme.request(conn)
-#=> {:ok, [DER-encoded certificate]}
+#=> {:ok, <<DER-encoded certificate>>}
 ```
 
 ### Revoke a certificate
 You can revoke a certificate by passing the certificate in DER format
 and specify a reason code.
-
 You can see all possible reason codes at:
 https://tools.ietf.org/html/rfc5280#section-5.3.1
 
 ```elixir
-Acme.revoke_certificate(cert_der, 0)
+Acme.revoke_certificate(<<DER-encoded certificate>>, 0)
 #=> :ok
 ```

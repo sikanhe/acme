@@ -1,4 +1,15 @@
 defmodule Acme.OpenSSL do
+  @moduledoc"""
+  Helper module for generating private keys and CSR by calling out
+  to OpenSSL
+  """
+
+  def openssl(args) do
+    case System.cmd("openssl", args, stderr_to_stdout: true) do
+      {output, 0} -> {:ok, output}
+      {error, 1} -> {:error, error}
+    end
+  end
 
   @rsa_key_sizes [2048, 3072, 4096]
   @ec_curves [:secp256r1, :secp384r1, :secp521r1]
@@ -20,14 +31,23 @@ defmodule Acme.OpenSSL do
      end
   end
 
-  @subject_keys %{
-    common_name:          "CN",
-    country_name:         "C",
-    organization_name:    "O",
-    organizational_unit:  "OU",
-    state_or_province:    "ST",
-    locality_name:        "L"
-  }
+  @doc """
+  Take a private key path and a subject map, generate a
+  new signed SR in DER format.
+
+  # Example
+      subject = %{
+        common_name: "example.acme.com",
+        organization_name: "Acme INC.",
+        organizational_unit: "HR",
+        locality_name: "New York",
+        state_or_province: "NY",
+        country_name: "United States"
+      }
+
+      {:ok, csr} = Acme.OpenSSL.generate_csr("/path/to/your/private_key.pem", subject)
+      #=> {:ok, <<DER-encoded CSR>>
+  """
   def generate_csr(private_key_path, subject) do
     Acme.OpenSSL.openssl ~w(
       req
@@ -43,18 +63,20 @@ defmodule Acme.OpenSSL do
     )
   end
 
-  def format_subject(subject) do
+  @subject_keys %{
+    common_name:          "CN",
+    country_name:         "C",
+    organization_name:    "O",
+    organizational_unit:  "OU",
+    state_or_province:    "ST",
+    locality_name:        "L"
+  }
+
+  defp format_subject(subject) do
     subject
     |> Enum.map(fn {k, v} ->
       "/#{@subject_keys[k]}=#{v}"
     end)
     |> Enum.join()
-  end
-
-  def openssl(args) do
-    case System.cmd("openssl", args, stderr_to_stdout: true) do
-      {output, 0} -> {:ok, output}
-      {error, 1} -> {:error, error}
-    end
   end
 end

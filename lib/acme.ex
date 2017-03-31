@@ -175,7 +175,7 @@ defmodule Acme do
       {:ok, conn} = Acme.Client.start_link(server: ..., private_key: ...)
       Acme.get_certificate("https://example.com/acme/cert/asdf")
       |> Acme.request(conn)
-      #=> {:ok, [DER-encoded certificate]}
+      #=> {:ok, <<DER-encoded certificate>>}
 
   """
   def get_certificate(url) do
