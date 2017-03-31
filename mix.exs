@@ -12,10 +12,11 @@ defmodule Acme.Mixfile do
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      deps: deps(),
-     description: description()]
+     description: description(),
+     package: package()]
   end
 
-  def package do
+  def package() do
     [maintainers: ["Sikan He"],
      licenses: ["MIT"],
      links: %{github: "https://github.com/sikanhe/acme"},
