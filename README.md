@@ -28,7 +28,7 @@ that takes these options:
 
 ```elixir
 {:ok, conn} = Acme.Client.start_link([
-  server: "https://acme-v01.api.letsencrypt.org/directory",
+  server: "https://acme-v01.api.letsencrypt.org",
   private_key_file: "path/to/key.pem"
 ])
 ```
