@@ -36,8 +36,10 @@ certificates for different accounts.
 ## Examples
 
 ### Staring a connection
+```elixir
 Acme.Client.start_link(server: ..., private_key: ...)
 #=> {:ok, conn}
+```
 
 We are going to reuse this connection for all examples below
 
