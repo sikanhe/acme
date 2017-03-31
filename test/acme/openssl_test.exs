@@ -17,7 +17,7 @@ defmodule Acme.OpenSSLTest do
     end
   end
 
-  for curve <- [:secp256r1, :secp384r1, :secp521r1] do
+  for curve <- [:secp256k1, :secp384r1, :secp521r1] do
     test "generate EC, curve: #{curve}" do
       assert {:ok, key} = OpenSSL.generate_key({:ec, unquote(curve)})
       assert key =~ "-----BEGIN EC PRIVATE KEY-----"
