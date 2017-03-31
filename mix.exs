@@ -18,8 +18,8 @@ defmodule Acme.Mixfile do
   def package do
     [maintainers: ["Sikan He"],
      licenses: ["MIT"],
-     links: %{github: "https://github.com/sikanhe/acme"}],
-     files: ["lib", "config", "mix.exs", "README*"]
+     links: %{github: "https://github.com/sikanhe/acme"},
+     files: ["lib", "config", "mix.exs", "README*"]]
   end
 
   def application do
