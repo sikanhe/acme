@@ -3,9 +3,9 @@ defmodule AcmeTest do
   doctest Acme
 
   setup do
-    {_, private_key} = JOSE.JWS.generate_key(%{"alg" => "ES256"}) |> JOSE.JWK.to_map()
+    {:ok, key} = Acme.OpenSSL.generate_key({:rsa, 2048})
     test_server = "https://acme-staging.api.letsencrypt.org"
-    {:ok, pid} = Acme.Client.start_link(server: test_server, private_key: private_key)
+    {:ok, pid} = Acme.Client.start_link(server: test_server, private_key: key)
     {:ok, %{client: pid}}
   end
 
@@ -44,8 +44,12 @@ defmodule AcmeTest do
 
   test "get a new certificate", %{client: client} do
     prepare_account(client)
-    assert {:error, %Acme.Error{status: 400, detail: err_detail}} = Acme.new_certificate("abc") |> Acme.request(client)
-    assert err_detail =~ "certificate request"
+    key_path = Path.join System.tmp_dir!, "test_csr_ec.pem"
+    {:ok, key_path} = Acme.OpenSSL.generate_key({:rsa, 2048}, key_path)
+    {:ok, csr} = Acme.OpenSSL.generate_csr(key_path, %{common_name: "example.com"})
+    assert {:error, %Acme.Error{status: 403, detail: err_detail}}
+      = Acme.new_certificate(csr) |> Acme.request(client)
+    assert err_detail =~ "example.com"
   end
 
   test "revoke a cert" do

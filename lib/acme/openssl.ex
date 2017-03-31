@@ -12,7 +12,7 @@ defmodule Acme.OpenSSL do
   end
 
   @rsa_key_sizes [2048, 3072, 4096]
-  @ec_curves [:secp256k1, :secp384r1, :secp521r1]
+  @ec_curves [:prime256v1, :secp256k1, :secp256r1, :secp384r1, :secp521r1]
 
   def generate_key({:rsa, size}, key_path) when size in @rsa_key_sizes do
     with {:ok, _} <- openssl ~w(genrsa -out #{key_path} #{size}) do
@@ -26,7 +26,7 @@ defmodule Acme.OpenSSL do
     openssl ~w(ecparam -name #{curve} -genkey)
   end
   def generate_key({:ec, curve}, key_path) when curve in @ec_curves do
-     with {:ok, _} <- openssl ~w(ecparam -name #{curve} -genkey -noout -out #{key_path}) do
+     with {:ok, _} <- openssl ~w(ecparam -name #{curve} -genkey -out #{key_path}) do
        {:ok, key_path}
      end
   end

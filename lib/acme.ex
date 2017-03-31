@@ -162,7 +162,7 @@ defmodule Acme do
       resource: "new-cert",
       payload: %{
         resource: "new-cert",
-        csr: Base.url_decode64(csr)
+        csr: Base.url_encode64(csr, padding: false)
       }
     }
   end
@@ -224,7 +224,7 @@ defmodule Acme do
       resource: "revoke-cert",
       payload: %{
         resource: "revoke-cert",
-        certificate: Base.url_decode64(certificate_der),
+        certificate: Base.url_encode64(csr, padding: false),
         reason: reason
       }
     }
