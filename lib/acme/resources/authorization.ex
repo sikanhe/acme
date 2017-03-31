@@ -18,8 +18,8 @@ defmodule Acme.Authorization do
     }
   end
 
-  @types [:http, "http", :dns, "dns"]
-  def fetch_challenge(%__MODULE__{challenges: challenges}, type) do
+  def fetch_challenge(%__MODULE__{challenges: challenges}, type)
+  when type in ["http-01", "dns-01", "tls-sni-01"] do
     Enum.find(challenges, &(&1.type == to_string(type)))
   end
 end

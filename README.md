@@ -1,5 +1,5 @@
 # Acme
-
+[![Build Status](https://semaphoreci.com/api/v1/sikanhe/acme/branches/master/badge.svg)](https://semaphoreci.com/sikanhe/acme)
 ## Installation
 
 Add `acme` to your list of dependencies in `mix.exs`:
