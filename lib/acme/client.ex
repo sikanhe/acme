@@ -216,6 +216,9 @@ defmodule Acme.Client do
   defp handle_response({:ok, 200, _header, cert}, "cert") do
     {:ok, cert}
   end
+  defp handle_response({:ok, 200, _header, _body}, "revoke-cert") do
+    :ok
+  end
   defp handle_response({:ok, status, _header, body}, _) when status > 299 do
     error = Poison.decode!(body)
     {:error, Acme.Error.from_map(error)}

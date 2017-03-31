@@ -17,4 +17,9 @@ defmodule Acme.Authorization do
       challenges: Enum.map(challenges, &Challenge.from_map/1)
     }
   end
+
+  @types [:http, "http", :dns, "dns"]
+  def fetch_challenge(%__MODULE__{challenges: challenges}, type) do
+    Enum.find(challenges, &(&1.type == to_string(type)))
+  end
 end

@@ -45,14 +45,21 @@ defmodule AcmeTest do
   test "get a new certificate", %{client: client} do
     prepare_account(client)
     key_path = Path.join System.tmp_dir!, "test_csr_ec.pem"
-    {:ok, key_path} = Acme.OpenSSL.generate_key({:rsa, 2048}, key_path)
     {:ok, csr} = Acme.OpenSSL.generate_csr(key_path, %{common_name: "example.com"})
-    assert {:error, %Acme.Error{status: 403, detail: err_detail}}
-      = Acme.new_certificate(csr) |> Acme.request(client)
+    assert {:error, %Acme.Error{status: err_status, detail: err_detail}} =
+      Acme.new_certificate(csr)
+      |> Acme.request(client)
+    assert err_status == 403
     assert err_detail =~ "example.com"
   end
 
-  test "revoke a cert" do
-
+  test "revoke a cert", %{client: client} do
+    prepare_account(client)
+    cert_der = File.read!(Path.expand("./test/support/cert.der"))
+    assert {:error, %Acme.Error{status: err_status, detail: err_detail}} =
+      Acme.revoke_certificate(cert_der)
+      |> Acme.request(client)
+    assert err_status == 404
+    assert err_detail == "No such certificate"
   end
 end
