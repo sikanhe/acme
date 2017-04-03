@@ -52,7 +52,6 @@ defmodule Acme.Client do
     }
     {:ok, pid} = Agent.start_link(fn -> init_state end)
     initialize(pid)
-    {:ok, pid}
   end
 
   @doc """
