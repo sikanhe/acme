@@ -51,8 +51,25 @@ defmodule Acme.Client do
       private_key: private_key
     }
     {:ok, pid} = Agent.start_link(fn -> init_state end)
-    initial_request(pid)
+    initialize(pid)
     {:ok, pid}
+  end
+
+  @doc """
+  (Re)Initialize a client. It calls the acme server and fetch its resource endpoints and
+  nonce. Can be used to refreshed nonce when you encounter an invalid nonce error.
+  """
+  def initialize(pid) do
+    directory_url = Path.join retrieve_server_url(pid), "directory"
+    case request(%Acme.Request{method: :get, url: directory_url, resource: "directory"}, pid) do
+      {:ok, endpoints} ->
+        update_endpoints(pid, endpoints)
+        {:ok, pid}
+      error ->
+        raise Acme.Client.ConnectionError, """
+          Failed to connect to Acme server at: #{directory_url}, error: #{inspect error}
+        """
+    end
   end
 
   defp validate_private_key_file(nil) do
@@ -91,19 +108,6 @@ defmodule Acme.Client do
       jwk
     rescue
       _ -> raise Acme.Client.InvalidPrivateKeyError
-    end
-  end
-
-  defp initial_request(pid) do
-    directory_url = Path.join retrieve_server_url(pid), "directory"
-    case request(%Acme.Request{method: :get, url: directory_url, resource: "directory"}, pid) do
-      {:ok, endpoints} ->
-        update_endpoints(pid, endpoints)
-        {:ok, pid}
-      error ->
-        raise Acme.Client.ConnectionError, """
-          Failed to connect to Acme server at: #{directory_url}, error: #{inspect error}
-        """
     end
   end
 
