@@ -53,7 +53,7 @@ defmodule Acme.Client do
       endpoints: nil,
       server_url: server_url,
       private_key: private_key,
-      connect_timeout: Keyword.get(opts, :timeout, @default_connect_timeout),
+      connect_timeout: Keyword.get(opts, :connect_timeout, @default_connect_timeout),
       recv_timeout: Keyword.get(opts, :recv_timeout, @default_recv_timeout)
     }
     {:ok, pid} = Agent.start_link(fn -> init_state end)
