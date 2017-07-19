@@ -19,8 +19,7 @@ defmodule Acme do
       #=> {:ok, %Registration{...}}
 
   """
-  @spec register(binary) :: Acme.Request.t
-  @spec register(list) :: Acme.Request.t
+  @spec register(binary | list) :: Acme.Request.t
   def register(contact) when is_bitstring(contact) do
     register([contact])
   end

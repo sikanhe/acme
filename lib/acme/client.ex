@@ -2,6 +2,8 @@ defmodule Acme.Client do
   alias JOSE.{JWK, JWS}
 
   @client_version Mix.Project.config[:version]
+  @default_connect_timeout 10_000
+  @default_recv_timeout 20_000
 
   defmodule MissingServerURLError do
     defexception message: """
@@ -35,6 +37,8 @@ defmodule Acme.Client do
   required unless you use `private_key_file` option
   * `private_key_file` - Instead of a private key map/pem value, you can also pass
   a private key file path
+  * `connect_timeout` - Timeout in milliseconds for establishing a request connection
+  * `recv_timeout` - Timeout in milliseconds for receiving the response for a request
   """
   def start_link(opts) do
     server_url = Keyword.get(opts, :server) || raise Acme.Client.MissingServerURLError
@@ -48,7 +52,9 @@ defmodule Acme.Client do
       nonce: nil,
       endpoints: nil,
       server_url: server_url,
-      private_key: private_key
+      private_key: private_key,
+      connect_timeout: Keyword.get(opts, :connect_timeout, @default_connect_timeout),
+      recv_timeout: Keyword.get(opts, :recv_timeout, @default_recv_timeout)
     }
     {:ok, pid} = Agent.start_link(fn -> init_state end)
     initialize(pid)
@@ -135,18 +141,21 @@ defmodule Acme.Client do
      {"Cache-Control", "no-store"}]
   end
 
-  def request(request = %Acme.Request{url: nil, resource: resource}, pid) do
-    request(%{request | url: map_resource_to_url(pid, resource)}, pid)
+  def create_hackney_opts(pid, request_opts) do
+    %{connect_timeout: connect_timeout, recv_timeout: recv_timeout} =
+      Agent.get(pid, fn state -> state end)
+    [with_body: true,
+     connect_timeout: Keyword.get(request_opts, :connect_timeout, connect_timeout),
+     recv_timeout: Keyword.get(request_opts, :recv_timeout, recv_timeout)]
   end
-  def request(%Acme.Request{method: :get, url: url, resource: resource}, pid) do
-    header = default_request_header()
-    hackney_opts = [with_body: true]
-    response = {_, _, header, _} = :hackney.request(:get, url, header, <<>>, hackney_opts)
-    nonce = find_response_header_value(header, "Replay-Nonce")
-    update_nonce(pid, nonce)
-    handle_response(response, resource)
+
+  def request(request, pid) do
+    request(request, pid, [])
   end
-  def request(%Acme.ChallengeRequest{type: type, uri: uri, token: token}, pid) do
+  def request(request = %Acme.Request{url: nil, resource: resource}, pid, opts) do
+    request(%{request | url: map_resource_to_url(pid, resource)}, pid, opts)
+  end
+  def request(%Acme.ChallengeRequest{type: type, uri: uri, token: token}, pid, opts) do
     key_auth = Acme.Challenge.create_key_authorization(token, account_key(pid))
     request = %Acme.Request{
       method: :post,
@@ -158,28 +167,33 @@ defmodule Acme.Client do
         keyAuthorization: key_auth
       }
     }
-    request(request, pid)
+    request(request, pid, opts)
   end
-  def request(%Acme.Request{method: method, url: url, resource: resource, payload: payload}, pid) do
+  def request(%Acme.Request{method: method, url: url, resource: resource, payload: payload}, pid, opts) do
     nonce = retrieve_nonce(pid)
-    payload = Poison.encode!(payload)
-    private_key = account_key(pid)
-    jws = sign_jws(payload, private_key, %{
-      "url" => url,
-      "resource" => resource,
-      "nonce" => nonce
-    })
     req_header = default_request_header()
-    req_body = Poison.encode!(jws)
-    hackney_opts = [with_body: true]
-    response = {_, _, header, _} = :hackney.request(method, url, req_header, req_body, hackney_opts)
+    req_body = case method do
+      :get -> <<>>
+      :post ->
+        payload = Poison.encode!(payload)
+        private_key = account_key(pid)
+        jws = sign_jws(payload, private_key, %{
+          "url" => url,
+          "resource" => resource,
+          "nonce" => nonce
+        })
+        Poison.encode!(jws)
+    end
+    hackney_opts = create_hackney_opts(pid, opts)
+    response = {_, _, header, _} =
+      :hackney.request(method, url, req_header, req_body, hackney_opts)
     nonce = find_response_header_value(header, "Replay-Nonce")
     update_nonce(pid, nonce)
     handle_response(response, resource)
   end
 
-  def request!(request, pid) do
-    case request(request, pid) do
+  def request!(request, pid, opts \\ []) do
+    case request(request, pid, opts) do
       {:ok, struct} -> struct
       error ->
         raise Acme.Request.Error, """
