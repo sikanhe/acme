@@ -155,14 +155,6 @@ defmodule Acme.Client do
   def request(request = %Acme.Request{url: nil, resource: resource}, pid, opts) do
     request(%{request | url: map_resource_to_url(pid, resource)}, pid, opts)
   end
-  def request(%Acme.Request{method: :get, url: url, resource: resource}, pid, opts) do
-    header = default_request_header()
-    hackney_opts = create_hackney_opts(pid, opts)
-    response = {_, _, header, _} = :hackney.request(:get, url, header, <<>>, hackney_opts)
-    nonce = find_response_header_value(header, "Replay-Nonce")
-    update_nonce(pid, nonce)
-    handle_response(response, resource)
-  end
   def request(%Acme.ChallengeRequest{type: type, uri: uri, token: token}, pid, opts) do
     key_auth = Acme.Challenge.create_key_authorization(token, account_key(pid))
     request = %Acme.Request{
@@ -179,17 +171,21 @@ defmodule Acme.Client do
   end
   def request(%Acme.Request{method: method, url: url, resource: resource, payload: payload}, pid, opts) do
     nonce = retrieve_nonce(pid)
-    payload = Poison.encode!(payload)
-    private_key = account_key(pid)
-    jws = sign_jws(payload, private_key, %{
-      "url" => url,
-      "resource" => resource,
-      "nonce" => nonce
-    })
     req_header = default_request_header()
-    req_body = Poison.encode!(jws)
+    req_body = case method do
+      :get -> <<>>
+      :post ->
+        payload = Poison.encode!(payload)
+        private_key = account_key(pid)
+        jws = sign_jws(payload, private_key, %{
+          "url" => url,
+          "resource" => resource,
+          "nonce" => nonce
+        })
+    end
     hackney_opts = create_hackney_opts(pid, opts)
-    response = {_, _, header, _} = :hackney.request(method, url, req_header, req_body, hackney_opts)
+    response = {_, _, header, _} =
+      :hackney.request(method, url, req_header, req_body, hackney_opts)
     nonce = find_response_header_value(header, "Replay-Nonce")
     update_nonce(pid, nonce)
     handle_response(response, resource)
