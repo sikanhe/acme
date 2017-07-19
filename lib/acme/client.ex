@@ -182,6 +182,7 @@ defmodule Acme.Client do
           "resource" => resource,
           "nonce" => nonce
         })
+        Poison.encode!(jws)
     end
     hackney_opts = create_hackney_opts(pid, opts)
     response = {_, _, header, _} =
