@@ -145,7 +145,7 @@ defmodule Acme.Client do
     %{connect_timeout: connect_timeout, recv_timeout: recv_timeout} =
       Agent.get(pid, fn state -> state end)
     [with_body: true,
-     timeout: Keyword.get(request_opts, :connect_timeout, connect_timeout),
+     connect_timeout: Keyword.get(request_opts, :connect_timeout, connect_timeout),
      recv_timeout: Keyword.get(request_opts, :recv_timeout, recv_timeout)]
   end
 
