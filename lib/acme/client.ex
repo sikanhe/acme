@@ -2,7 +2,7 @@ defmodule Acme.Client do
   alias JOSE.{JWK, JWS}
 
   @client_version Mix.Project.config[:version]
-  @default_timeout 10_000
+  @default_connect_timeout 10_000
   @default_recv_timeout 20_000
 
   defmodule MissingServerURLError do
@@ -37,7 +37,7 @@ defmodule Acme.Client do
   required unless you use `private_key_file` option
   * `private_key_file` - Instead of a private key map/pem value, you can also pass
   a private key file path
-  * `timeout` - Timeout in milliseconds for establishing a request connection
+  * `connect_timeout` - Timeout in milliseconds for establishing a request connection
   * `recv_timeout` - Timeout in milliseconds for receiving the response for a request
   """
   def start_link(opts) do
@@ -53,7 +53,7 @@ defmodule Acme.Client do
       endpoints: nil,
       server_url: server_url,
       private_key: private_key,
-      timeout: Keyword.get(opts, :timeout, @default_timeout),
+      connect_timeout: Keyword.get(opts, :timeout, @default_connect_timeout),
       recv_timeout: Keyword.get(opts, :recv_timeout, @default_recv_timeout)
     }
     {:ok, pid} = Agent.start_link(fn -> init_state end)
@@ -142,10 +142,10 @@ defmodule Acme.Client do
   end
 
   def create_hackney_opts(pid, request_opts) do
-    timeout = Agent.get(pid, fn %{timeout: timeout} -> timeout end)
-    recv_timeout = Agent.get(pid, fn %{recv_timeout: timeout} -> timeout end)
+    %{connect_timeout: connect_timeout, recv_timeout: recv_timeout} =
+      Agent.get(pid, fn state -> state end)
     [with_body: true,
-     timeout: Keyword.get(request_opts, :timeout, timeout),
+     timeout: Keyword.get(request_opts, :connect_timeout, connect_timeout),
      recv_timeout: Keyword.get(request_opts, :recv_timeout, recv_timeout)]
   end
 
