@@ -28,9 +28,9 @@ defmodule Acme.Mixfile do
   end
 
   defp deps do
-    [{:hackney, "~> 1.7.1"},
-     {:poison, "~> 3.1.0"},
-     {:jose, "~> 1.8.2"},
+    [{:hackney, "~> 1.10"},
+     {:poison, "~> 3.1"},
+     {:jose, "~> 1.8"},
      # Docs
      {:ex_doc, "~> 0.15", only: :dev},
      {:earmark, "~> 1.2", only: :dev},
