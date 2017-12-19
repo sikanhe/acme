@@ -6,7 +6,7 @@ Add `acme` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
-  [{:acme, "~> 0.5.0"}]
+  [{:acme, "~> 0.5.1"}]
 end
 ```
 
