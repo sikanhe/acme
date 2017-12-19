@@ -56,7 +56,7 @@ Acme.agree_terms(registration) |> Acme.request(conn)
 Acme.authorize("yourdomain.com") |> Acme.request(conn)
 #=> {:ok, %Authorization{
   status: "pending",
-  challanges: [
+  challenges: [
     %Acme.Challenge{
       type: "http-01",
       token "..."
