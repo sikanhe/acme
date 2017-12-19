@@ -10,13 +10,17 @@ defmodule AcmeTest do
   end
 
   def prepare_account(client) do
-    {:ok, %Acme.Registration{} = reg} = Acme.register("mailto:example@gmail.com") |> Acme.request(client)
-    {:ok, %Acme.Registration{}}  = Acme.agree_terms(reg) |> Acme.request(client)
+    {:ok, %Acme.Registration{} = reg} =
+      Acme.register("mailto:example@gmail.com") |> Acme.request(client)
+
+    {:ok, %Acme.Registration{}} = Acme.agree_terms(reg) |> Acme.request(client)
     reg
   end
 
   test "register account", %{client: client} do
-    assert {:ok, reg = %Acme.Registration{uri: reg_uri}} = Acme.register("mailto:example@gmail.com") |> Acme.request(client)
+    assert {:ok, reg = %Acme.Registration{uri: reg_uri}} =
+             Acme.register("mailto:example@gmail.com") |> Acme.request(client)
+
     assert {:ok, _reg} = Acme.agree_terms(reg) |> Acme.request(client)
     assert {:ok, %Acme.Registration{}} = Acme.fetch_registration(reg_uri) |> Acme.request(client)
   end
@@ -27,29 +31,34 @@ defmodule AcmeTest do
 
   test "new authorization", %{client: client} do
     prepare_account(client)
+
     assert {:ok, %Acme.Authorization{}} =
-      Acme.authorize("sikanhe.com")
-      |> Acme.request(client)
+             Acme.authorize("sikanhe.com")
+             |> Acme.request(client)
   end
 
   test "respond to challenge", %{client: client} do
     prepare_account(client)
+
     {:ok, %Acme.Authorization{challenges: challenges}} =
       Acme.authorize("challengetest.com")
       |> Acme.request(client)
+
     assert {:ok, %Acme.Challenge{status: "pending"}} =
-      Acme.respond_challenge(List.first(challenges))
-      |> Acme.request(client)
+             Acme.respond_challenge(List.first(challenges))
+             |> Acme.request(client)
   end
 
   test "get a new certificate", %{client: client} do
     prepare_account(client)
-    key_path = Path.join System.tmp_dir!, "test_csr_ec.pem"
+    key_path = Path.join(System.tmp_dir!(), "test_csr_ec.pem")
     {:ok, _} = Acme.OpenSSL.generate_key({:rsa, 2048}, key_path)
     {:ok, csr} = Acme.OpenSSL.generate_csr(key_path, %{common_name: "example.com"})
+
     assert {:error, %Acme.Error{status: err_status, detail: err_detail}} =
-      Acme.new_certificate(csr)
-      |> Acme.request(client)
+             Acme.new_certificate(csr)
+             |> Acme.request(client)
+
     assert err_status == 403
     assert err_detail =~ "example.com"
   end
@@ -57,9 +66,11 @@ defmodule AcmeTest do
   test "revoke a cert", %{client: client} do
     prepare_account(client)
     cert_der = File.read!(Path.expand("./test/support/cert.der"))
+
     assert {:error, %Acme.Error{status: err_status, detail: err_detail}} =
-      Acme.revoke_certificate(cert_der)
-      |> Acme.request(client)
+             Acme.revoke_certificate(cert_der)
+             |> Acme.request(client)
+
     assert err_status == 404
     assert err_detail == "No such certificate"
   end

@@ -1,5 +1,5 @@
 defmodule Acme.OpenSSL do
-  @moduledoc"""
+  @moduledoc """
   Helper module for generating private keys and CSR by calling out
   to OpenSSL
   """
@@ -15,20 +15,23 @@ defmodule Acme.OpenSSL do
   @ec_curves [:prime256v1, :secp384r1]
 
   def generate_key({:rsa, size}, key_path) when size in @rsa_key_sizes do
-    with {:ok, _} <- openssl ~w(genrsa -out #{key_path} #{size}) do
+    with {:ok, _} <- openssl(~w(genrsa -out #{key_path} #{size})) do
       {:ok, key_path}
     end
   end
+
   def generate_key({:rsa, size}) when size in @rsa_key_sizes do
-    openssl ~w(genrsa #{size})
+    openssl(~w(genrsa #{size}))
   end
+
   def generate_key({:ec, curve}) when curve in @ec_curves do
-    openssl ~w(ecparam -name #{curve} -genkey)
+    openssl(~w(ecparam -name #{curve} -genkey))
   end
+
   def generate_key({:ec, curve}, key_path) when curve in @ec_curves do
-     with {:ok, _} <- openssl ~w(ecparam -name #{curve} -genkey -out #{key_path}) do
-       {:ok, key_path}
-     end
+    with {:ok, _} <- openssl(~w(ecparam -name #{curve} -genkey -out #{key_path})) do
+      {:ok, key_path}
+    end
   end
 
   @doc """
@@ -49,7 +52,7 @@ defmodule Acme.OpenSSL do
       #=> {:ok, <<DER-encoded CSR>>
   """
   def generate_csr(private_key_path, subject) do
-    Acme.OpenSSL.openssl [
+    Acme.OpenSSL.openssl([
       "req",
       "-new",
       "-sha256",
@@ -60,23 +63,23 @@ defmodule Acme.OpenSSL do
       format_subject(subject),
       "-outform",
       "DER"
-    ]
+    ])
   end
 
   @subject_keys %{
-    common_name:          "CN",
-    country_name:         "C",
-    organization_name:    "O",
-    organizational_unit:  "OU",
-    state_or_province:    "ST",
-    locality_name:        "L"
+    common_name: "CN",
+    country_name: "C",
+    organization_name: "O",
+    organizational_unit: "OU",
+    state_or_province: "ST",
+    locality_name: "L"
   }
 
   defp format_subject(subject) do
     subject
     |> Enum.map(fn {k, v} ->
-      "/#{@subject_keys[k]}=#{v}"
-    end)
+         "/#{@subject_keys[k]}=#{v}"
+       end)
     |> Enum.join()
   end
 end

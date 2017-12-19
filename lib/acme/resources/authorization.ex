@@ -4,12 +4,13 @@ defmodule Acme.Authorization do
   alias Acme.{Identifier, Challenge}
 
   def from_map(%{
-    "expires" => expires,
-    "identifier" => identifier,
-    "status" => status,
-    "challenges" => challenges
-  }) do
+        "expires" => expires,
+        "identifier" => identifier,
+        "status" => status,
+        "challenges" => challenges
+      }) do
     {:ok, expires_datetime, _} = DateTime.from_iso8601(expires)
+
     %__MODULE__{
       status: status,
       expires: expires_datetime,
@@ -19,7 +20,7 @@ defmodule Acme.Authorization do
   end
 
   def fetch_challenge(%__MODULE__{challenges: challenges}, type)
-  when type in ["http-01", "dns-01", "tls-sni-01"] do
+      when type in ["http-01", "dns-01", "tls-sni-01"] do
     Enum.find(challenges, &(&1.type == to_string(type)))
   end
 end

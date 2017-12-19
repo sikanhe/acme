@@ -3,8 +3,8 @@ defmodule Acme.OpenSSLTest do
   alias Acme.OpenSSL
 
   def gen_key_path do
-   name = :crypto.strong_rand_bytes(8) |> Base.url_encode64 |> binary_part(0, 8)
-   Path.join System.tmp_dir!, "#{name}.pem"
+    name = :crypto.strong_rand_bytes(8) |> Base.url_encode64() |> binary_part(0, 8)
+    Path.join(System.tmp_dir!(), "#{name}.pem")
   end
 
   for size <- [2048, 3072, 4096] do
@@ -30,8 +30,10 @@ defmodule Acme.OpenSSLTest do
   test "generate a csr" do
     key_path = gen_key_path()
     {:ok, _} = OpenSSL.generate_key({:ec, :secp384r1}, key_path)
-    assert {:ok, _csr_der} = OpenSSL.generate_csr(key_path, %{
-      common_name: "acme.com"
-    })
+
+    assert {:ok, _csr_der} =
+             OpenSSL.generate_csr(key_path, %{
+               common_name: "acme.com"
+             })
   end
 end

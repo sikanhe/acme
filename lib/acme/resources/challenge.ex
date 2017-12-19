@@ -1,15 +1,12 @@
 defmodule Acme.Challenge do
-  defstruct [:token,
-             :status,
-             :type,
-             :uri]
+  defstruct [:token, :status, :type, :uri]
 
   def from_map(%{
-    "type" => type,
-    "status" => status,
-    "uri" => uri,
-    "token" => token
-  }) do
+        "type" => type,
+        "status" => status,
+        "uri" => uri,
+        "token" => token
+      }) do
     %__MODULE__{
       type: type,
       status: status,
@@ -25,6 +22,7 @@ defmodule Acme.Challenge do
   def create_key_authorization(%__MODULE__{token: token}, jwk) do
     create_key_authorization(token, jwk)
   end
+
   def create_key_authorization(token, jwk) do
     thumbprint = JOSE.JWK.thumbprint(jwk)
     "#{token}.#{thumbprint}"
@@ -32,6 +30,7 @@ defmodule Acme.Challenge do
 
   def generate_dns_txt_record(%__MODULE__{type: "dns-01", token: token}, jwk) do
     ka = create_key_authorization(token, jwk)
+
     :crypto.hash(:sha256, ka)
     |> Base.url_encode64(padding: false)
   end
