@@ -1,9 +1,9 @@
 defmodule Acme do
   @moduledoc File.read!(Path.expand("./README.md"))
 
-  @spec request(Acme.Request.t, pid) :: {:ok, term} | {:error, Acme.Error.t}
+  @spec request(Acme.Request.t(), pid) :: {:ok, term} | {:error, Acme.Error.t()}
   defdelegate request(request, pid), to: Acme.Client
-  @spec request!(Acme.Request.r, pid) :: term
+  @spec request!(Acme.Request.r(), pid) :: term
   defdelegate request!(request, pid), to: Acme.Client
 
   @doc """
@@ -19,10 +19,11 @@ defmodule Acme do
       #=> {:ok, %Registration{...}}
 
   """
-  @spec register(binary | list) :: Acme.Request.t
+  @spec register(binary | list) :: Acme.Request.t()
   def register(contact) when is_bitstring(contact) do
     register([contact])
   end
+
   def register(contact) when is_list(contact) do
     %Acme.Request{
       method: :post,
@@ -50,7 +51,7 @@ defmodule Acme do
       #=> {:ok, %Registration{...}}
 
   """
-  @spec agree_terms(Acme.Registration.t) :: Acme.Request.t
+  @spec agree_terms(Acme.Registration.t()) :: Acme.Request.t()
   def agree_terms(%Acme.Registration{term_of_service_uri: terms_uri, uri: reg_uri}) do
     %Acme.Request{
       method: :post,
@@ -78,7 +79,7 @@ defmodule Acme do
       #=> {:ok, %Registraction{...}}
 
   """
-  @spec fetch_registration(binary) :: Acme.Request.t
+  @spec fetch_registration(binary) :: Acme.Request.t()
   def fetch_registration(registration_uri) do
     %Acme.Request{
       method: :post,
@@ -102,7 +103,7 @@ defmodule Acme do
       #=> {:ok, %Authorization{status: "pending", challenges: [...], ...}}
 
   """
-  @spec authorize(binary) :: Acme.Request.t
+  @spec authorize(binary) :: Acme.Request.t()
   def authorize(domain) do
     %Acme.Request{
       method: :post,
@@ -132,7 +133,7 @@ defmodule Acme do
       #=> {:ok, %Challenge{status: "pending", ...}}
 
   """
-  @spec respond_challenge(Acme.Challenge.t) :: Acme.Request.t
+  @spec respond_challenge(Acme.Challenge.t()) :: Acme.Request.t()
   def respond_challenge(%Acme.Challenge{type: type, uri: uri, token: token}) do
     %Acme.ChallengeRequest{
       uri: uri,
@@ -184,7 +185,6 @@ defmodule Acme do
       resource: "cert"
     }
   end
-
 
   @doc """
   Takes a certificate in DER format and a reason code and builds
