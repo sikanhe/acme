@@ -49,18 +49,18 @@ defmodule Acme.OpenSSL do
       #=> {:ok, <<DER-encoded CSR>>
   """
   def generate_csr(private_key_path, subject) do
-    Acme.OpenSSL.openssl ~w(
-      req
-      -new
-      -sha256
-      -nodes
-      -key
-      #{private_key_path}
-      -subj
-      #{format_subject(subject)}
-      -outform
-      DER
-    )
+    Acme.OpenSSL.openssl [
+      "req",
+      "-new",
+      "-sha256",
+      "-nodes",
+      "-key",
+      private_key_path,
+      "-subj",
+      format_subject(subject),
+      "-outform",
+      "DER"
+    ]
   end
 
   @subject_keys %{
