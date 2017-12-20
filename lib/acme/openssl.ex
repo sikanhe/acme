@@ -34,10 +34,27 @@ defmodule Acme.OpenSSL do
     openssl(~w(ecparam -name #{curve} -genkey))
   end
 
-  def generate_key({:ec, curve}, key_path) when curve in @ec_curves do
-    with {:ok, _} <- openssl(~w(ecparam -name #{curve} -genkey -out #{key_path})) do
-      {:ok, key_path}
-    end
+  @doc """
+  Take a csr path and verify the signature, optional argument
+
+  # Example
+      {:ok, output} = Acme.OpenSSL.verify_csr("/path/to/your/csr.der")
+      #=> {:ok, "verify OK\n"}
+
+      {:ok, output} = Acme.OpenSSL.verify_csr("/path/to/your/csr.der", "PEM")
+      #=> {:ok, "verify OK\n"}
+  """
+  def verify_csr(csr_path, inform \\ "DER") do
+    Acme.OpenSSL.openssl(~w(
+      req
+      -noout
+      -text
+      -verify
+      -in
+      #{csr_path}
+      -inform
+      #{inform}
+    ))
   end
 
   @doc """
