@@ -20,6 +20,12 @@ defmodule Acme.OpenSSL do
     end
   end
 
+  def generate_key({:ec, curve}, key_path) when curve in @ec_curves do
+    with {:ok, _} <- openssl(~w(ecparam -name #{curve} -genkey -out #{key_path})) do
+      {:ok, key_path}
+    end
+  end
+
   def generate_key({:rsa, size}) when size in @rsa_key_sizes do
     openssl(~w(genrsa #{size}))
   end
