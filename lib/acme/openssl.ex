@@ -41,7 +41,7 @@ defmodule Acme.OpenSSL do
       {:ok, output} = Acme.OpenSSL.verify_csr("/path/to/your/csr.der")
       #=> {:ok, "verify OK\n"}
 
-      {:ok, output} = Acme.OpenSSL.verify_csr("/path/to/your/csr.der", "PEM")
+      {:ok, output} = Acme.OpenSSL.verify_csr("/path/to/your/csr.pem", "PEM")
       #=> {:ok, "verify OK\n"}
   """
   def verify_csr(csr_path, inform \\ "DER") do
@@ -73,9 +73,12 @@ defmodule Acme.OpenSSL do
 
       {:ok, csr} = Acme.OpenSSL.generate_csr("/path/to/your/private_key.pem", subject)
       #=> {:ok, <<DER-encoded CSR>>
+
+      {:ok, csr} = Acme.OpenSSL.generate_csr("/path/to/your/private_key.pem", subject, "/path/to/csr.conf")
+      #=> {:ok, <<DER-encoded CSR>>
   """
-  def generate_csr(private_key_path, subject) do
-    Acme.OpenSSL.openssl([
+  def generate_csr(private_key_path, subject, csr_config_path \\ nil) do
+    openssl_args = [
       "req",
       "-new",
       "-sha256",
@@ -86,7 +89,12 @@ defmodule Acme.OpenSSL do
       format_subject(subject),
       "-outform",
       "DER"
-    ])
+    ]
+
+    case csr_config_path do
+      nil -> Acme.OpenSSL.openssl(openssl_args)
+      _ -> Acme.OpenSSL.openssl(openssl_args ++ ["-config", csr_config_path])
+    end
   end
 
   @subject_keys %{
