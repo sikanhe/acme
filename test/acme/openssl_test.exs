@@ -29,11 +29,14 @@ defmodule Acme.OpenSSLTest do
 
   test "generate a csr" do
     key_path = gen_key_path()
+    conf_path = Path.expand("./test/support/csr.conf")
+    csr_path = key_path <> ".csr"
+
     {:ok, _} = OpenSSL.generate_key({:ec, :secp384r1}, key_path)
 
-    assert {:ok, _csr_der} =
-             OpenSSL.generate_csr(key_path, %{
-               common_name: "acme.com"
-             })
+    assert {:ok, csr_der} = OpenSSL.generate_csr(key_path, %{common_name: "acme.com"}, conf_path)
+
+    File.write!(csr_path, csr_der)
+    assert {:ok, _} = OpenSSL.verify_csr(csr_path)
   end
 end

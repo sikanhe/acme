@@ -20,6 +20,12 @@ defmodule Acme.OpenSSL do
     end
   end
 
+  def generate_key({:ec, curve}, key_path) when curve in @ec_curves do
+    with {:ok, _} <- openssl(~w(ecparam -name #{curve} -genkey -out #{key_path})) do
+      {:ok, key_path}
+    end
+  end
+
   def generate_key({:rsa, size}) when size in @rsa_key_sizes do
     openssl(~w(genrsa #{size}))
   end
@@ -28,10 +34,27 @@ defmodule Acme.OpenSSL do
     openssl(~w(ecparam -name #{curve} -genkey))
   end
 
-  def generate_key({:ec, curve}, key_path) when curve in @ec_curves do
-    with {:ok, _} <- openssl(~w(ecparam -name #{curve} -genkey -out #{key_path})) do
-      {:ok, key_path}
-    end
+  @doc """
+  Take a csr path and verify the signature, optional argument
+
+  # Example
+      {:ok, output} = Acme.OpenSSL.verify_csr("/path/to/your/csr.der")
+      #=> {:ok, "verify OK\n"}
+
+      {:ok, output} = Acme.OpenSSL.verify_csr("/path/to/your/csr.pem", "PEM")
+      #=> {:ok, "verify OK\n"}
+  """
+  def verify_csr(csr_path, inform \\ "DER") do
+    Acme.OpenSSL.openssl(~w(
+      req
+      -noout
+      -text
+      -verify
+      -in
+      #{csr_path}
+      -inform
+      #{inform}
+    ))
   end
 
   @doc """
@@ -50,9 +73,12 @@ defmodule Acme.OpenSSL do
 
       {:ok, csr} = Acme.OpenSSL.generate_csr("/path/to/your/private_key.pem", subject)
       #=> {:ok, <<DER-encoded CSR>>
+
+      {:ok, csr} = Acme.OpenSSL.generate_csr("/path/to/your/private_key.pem", subject, "/path/to/csr.conf")
+      #=> {:ok, <<DER-encoded CSR>>
   """
-  def generate_csr(private_key_path, subject) do
-    Acme.OpenSSL.openssl([
+  def generate_csr(private_key_path, subject, csr_config_path \\ nil) do
+    openssl_args = [
       "req",
       "-new",
       "-sha256",
@@ -63,7 +89,12 @@ defmodule Acme.OpenSSL do
       format_subject(subject),
       "-outform",
       "DER"
-    ])
+    ]
+
+    case csr_config_path do
+      nil -> Acme.OpenSSL.openssl(openssl_args)
+      _ -> Acme.OpenSSL.openssl(openssl_args ++ ["-config", csr_config_path])
+    end
   end
 
   @subject_keys %{
