@@ -34,8 +34,8 @@ defmodule Acme.Mixfile do
   defp deps do
     [
       {:hackney, "~> 1.10"},
-      {:poison, "~> 3.1"},
-      {:jose, "~> 1.8"},
+      {:jason, "~> 1.1"},
+      {:jose, "~> 1.9"},
       # Docs
       {:ex_doc, "~> 0.15", only: :dev},
       {:earmark, "~> 1.2", only: :dev},

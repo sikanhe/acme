@@ -200,7 +200,7 @@ defmodule Acme.Client do
           <<>>
 
         :post ->
-          payload = Poison.encode!(payload)
+          payload = Jason.encode!(payload)
           private_key = account_key(pid)
 
           jws =
@@ -210,7 +210,7 @@ defmodule Acme.Client do
               "nonce" => nonce
             })
 
-          Poison.encode!(jws)
+          Jason.encode!(jws)
       end
 
     hackney_opts = create_hackney_opts(pid, opts)
@@ -238,25 +238,25 @@ defmodule Acme.Client do
   end
 
   defp handle_response({:ok, 200, _header, body}, "directory") do
-    {:ok, Poison.decode!(body)}
+    {:ok, Jason.decode!(body)}
   end
 
   defp handle_response({:ok, 201, header, body}, "new-reg") do
-    response = Poison.decode!(body)
+    response = Jason.decode!(body)
     {:ok, Acme.Registration.from_response(header, response)}
   end
 
   defp handle_response({:ok, 202, header, body}, "reg") do
-    response = Poison.decode!(body)
+    response = Jason.decode!(body)
     {:ok, Acme.Registration.from_response(header, response)}
   end
 
   defp handle_response({:ok, 201, _header, body}, "new-authz") do
-    {:ok, Acme.Authorization.from_map(Poison.decode!(body))}
+    {:ok, Acme.Authorization.from_map(Jason.decode!(body))}
   end
 
   defp handle_response({:ok, 202, _header, body}, "challenge") do
-    challenge = Poison.decode!(body)
+    challenge = Jason.decode!(body)
     {:ok, Acme.Challenge.from_map(challenge)}
   end
 
@@ -279,7 +279,7 @@ defmodule Acme.Client do
   end
 
   defp handle_response({:ok, status, _header, body}, _) when status > 299 do
-    error = Poison.decode!(body)
+    error = Jason.decode!(body)
     {:error, Acme.Error.from_map(error)}
   end
 

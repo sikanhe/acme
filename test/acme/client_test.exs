@@ -12,7 +12,7 @@ defmodule Acme.ClientTest do
     jwk_public = private_key |> JWK.to_public()
     jws = Client.sign_jws(payload, private_key, %{"nonce" => nonce})
     # Check if protected contains nonce
-    protected = JWS.peek_protected(jws) |> Poison.decode!()
+    protected = JWS.peek_protected(jws) |> Jason.decode!()
     assert protected["nonce"] == nonce
     assert protected["alg"] == alg
     assert JWS.peek_payload(jws) == payload
